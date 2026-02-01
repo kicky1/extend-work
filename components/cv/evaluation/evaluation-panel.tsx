@@ -1,14 +1,48 @@
 'use client'
 
 import { useState } from 'react'
-import { X, CheckCircle2, Target, FileSearch, Briefcase, RefreshCw, Loader2, Wand2, TrendingUp } from 'lucide-react'
+import { X, CheckCircle2, Target, FileSearch, Briefcase, RefreshCw, Loader2, Wand2, TrendingUp, Lock, HelpCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import useEvaluationStore from '@/lib/stores/evaluation-store'
 import useCVStore from '@/lib/stores/cv-store'
 import ScoreBadge, { SectionScoreBar } from './score-badge'
 import IssueCard from './issue-card'
 import FixPreviewModal from './fix-preview-modal'
+import UpgradeModal from '@/components/subscription/upgrade-modal'
+import { useSubscription } from '@/lib/hooks/use-subscription'
 import type { CVIssue, IssueSeverity } from '@/lib/types/cv-evaluation'
+
+// Tooltip component for score explanations
+function ScoreTooltip({ children, tooltip }: { children: React.ReactNode; tooltip: string }) {
+  return (
+    <div className="relative group inline-flex items-center gap-1">
+      {children}
+      <HelpCircle className="w-3 h-3 text-muted-foreground/50 cursor-help" />
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-foreground text-background text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 pointer-events-none">
+        {tooltip}
+        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-foreground" />
+      </div>
+    </div>
+  )
+}
+
+// Score tooltips explanations
+const SCORE_TOOLTIPS = {
+  overall: 'Combined score based on completeness, content quality, and formatting',
+  ats: 'How well your CV will be parsed by Applicant Tracking Systems (automated screening)',
+  keyword: 'Measures relevant industry keywords, action verbs, and technical terms',
+  jobMatch: 'How closely your experience matches the job requirements',
+}
 
 export default function EvaluationPanel() {
   const {
@@ -27,10 +61,14 @@ export default function EvaluationPanel() {
     markIssueFixed,
   } = useEvaluationStore()
   const { cvData } = useCVStore()
+  const { isPro, refetch } = useSubscription()
   const [fixingIssue, setFixingIssue] = useState<CVIssue | null>(null)
   const [fixAllProgress, setFixAllProgress] = useState({ current: 0, total: 0 })
   const [showAllFoundKeywords, setShowAllFoundKeywords] = useState(false)
   const [showAllSuggestedKeywords, setShowAllSuggestedKeywords] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [upgradeReason, setUpgradeReason] = useState<'not_pro' | 'limit_exceeded'>('not_pro')
+  const [showFixAllConfirm, setShowFixAllConfirm] = useState(false)
 
   if (!isPanelOpen || !evaluation) return null
 
@@ -55,23 +93,46 @@ export default function EvaluationPanel() {
     return baselineEvaluation?.sectionScores.find(s => s.section === section)?.score
   }
 
-  const handleReEvaluate = () => {
+  const handleReEvaluate = async () => {
+    if (!isPro) {
+      setUpgradeReason('not_pro')
+      setShowUpgradeModal(true)
+      return
+    }
     // Pass isReEvaluation=true to trigger anchored scoring based on baseline
-    evaluate(cvData, jobDescription || undefined, true)
+    await evaluate(cvData, jobDescription || undefined, true)
+    refetch()
   }
 
   const handleFixIssue = (issue: CVIssue) => {
+    if (!isPro) {
+      setUpgradeReason('not_pro')
+      setShowUpgradeModal(true)
+      return
+    }
     setFixingIssue(issue)
   }
 
   const handleFixApplied = (issueId: string) => {
     markIssueFixed(issueId)
     setFixingIssue(null)
+    refetch()
   }
 
-  const handleFixAll = async () => {
+  // Show confirmation dialog before fixing all
+  const handleFixAllClick = () => {
+    if (!isPro) {
+      setUpgradeReason('not_pro')
+      setShowUpgradeModal(true)
+      return
+    }
     if (remainingIssues.length === 0) return
+    setShowFixAllConfirm(true)
+  }
 
+  // Actually fix all issues after confirmation
+  const handleFixAllConfirmed = async () => {
+    setShowFixAllConfirm(false)
     setIsFixingAll(true)
     setFixAllProgress({ current: 0, total: remainingIssues.length })
 
@@ -87,13 +148,21 @@ export default function EvaluationPanel() {
           body: JSON.stringify({ issue, cvData }),
         })
 
-        if (!response.ok) continue
+        if (!response.ok) {
+          const data = await response.json()
+          if (data.code === 'NOT_PRO' || data.code === 'LIMIT_EXCEEDED') {
+            setUpgradeReason(data.code === 'NOT_PRO' ? 'not_pro' : 'limit_exceeded')
+            setShowUpgradeModal(true)
+            break
+          }
+          continue
+        }
 
         const data = await response.json()
-        if (data.toolCalls && data.toolCalls.length > 0) {
-          // Execute tool calls - import dynamically to avoid circular deps
-          const { executeToolCalls } = await import('@/lib/utils/execute-tool-calls')
-          executeToolCalls(data.toolCalls)
+        if (data.toolResults && data.toolResults.length > 0) {
+          // Apply tool results - import dynamically to avoid circular deps
+          const { applyToolResults } = await import('@/lib/utils/apply-tool-results')
+          applyToolResults(data.toolResults)
           markIssueFixed(issue.id)
         }
       } catch {
@@ -104,6 +173,7 @@ export default function EvaluationPanel() {
 
     setIsFixingAll(false)
     setFixAllProgress({ current: 0, total: 0 })
+    refetch()
   }
 
   // Calculate score delta for re-evaluation display
@@ -180,7 +250,9 @@ export default function EvaluationPanel() {
             previousScore={baselineOverall}
           />
           <div className="flex-1">
-            <p className="text-sm text-gray-600">Overall Score</p>
+            <ScoreTooltip tooltip={SCORE_TOOLTIPS.overall}>
+              <p className="text-sm text-gray-600">Overall Score</p>
+            </ScoreTooltip>
             {scoreDelta > 0 ? (
               <div className="flex items-center gap-1.5 mt-1">
                 <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
@@ -202,7 +274,9 @@ export default function EvaluationPanel() {
           <div className="p-3 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <FileSearch className="w-4 h-4 text-gray-500" />
-              <span className="text-xs font-medium text-gray-600">ATS Score</span>
+              <ScoreTooltip tooltip={SCORE_TOOLTIPS.ats}>
+                <span className="text-xs font-medium text-gray-600">ATS Score</span>
+              </ScoreTooltip>
             </div>
             <div className="flex items-center gap-2">
               <ScoreBadge score={evaluation.atsScore} size="sm" previousScore={baselineAts} />
@@ -217,7 +291,9 @@ export default function EvaluationPanel() {
             <div className="p-3 bg-blue-50 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <Target className="w-4 h-4 text-blue-500" />
-                <span className="text-xs font-medium text-blue-600">Job Match</span>
+                <ScoreTooltip tooltip={SCORE_TOOLTIPS.jobMatch}>
+                  <span className="text-xs font-medium text-blue-600">Job Match</span>
+                </ScoreTooltip>
               </div>
               <div className="flex items-center gap-2">
                 <ScoreBadge score={evaluation.jobMatchScore} size="sm" />
@@ -231,7 +307,9 @@ export default function EvaluationPanel() {
 
         {/* Keyword Analysis */}
         <div>
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Keyword Analysis</h3>
+          <ScoreTooltip tooltip={SCORE_TOOLTIPS.keyword}>
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Keyword Analysis</h3>
+          </ScoreTooltip>
           <div className="space-y-2">
             <SectionScoreBar
               label="Keyword Score"
@@ -339,7 +417,7 @@ export default function EvaluationPanel() {
               <Button
                 variant="outline"
                 size="xs"
-                onClick={handleFixAll}
+                onClick={handleFixAllClick}
                 disabled={isFixingAll}
               >
                 {isFixingAll ? (
@@ -351,6 +429,7 @@ export default function EvaluationPanel() {
                   <>
                     <Wand2 className="w-3 h-3 mr-1" />
                     Fix All Issues
+                    {!isPro && <Lock className="w-3 h-3 ml-1" />}
                   </>
                 )}
               </Button>
@@ -395,6 +474,45 @@ export default function EvaluationPanel() {
         onFixApplied={handleFixApplied}
       />
     )}
+
+    {/* Upgrade Modal */}
+    <UpgradeModal
+      isOpen={showUpgradeModal}
+      onClose={() => setShowUpgradeModal(false)}
+      reason={upgradeReason}
+    />
+
+    {/* Fix All Confirmation Dialog */}
+    <AlertDialog open={showFixAllConfirm} onOpenChange={setShowFixAllConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Fix All Issues?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will automatically apply AI-suggested fixes to {remainingIssues.length} issue{remainingIssues.length !== 1 ? 's' : ''} in your CV:
+            <ul className="mt-2 text-xs space-y-1">
+              {remainingIssues.slice(0, 5).map((issue) => (
+                <li key={issue.id} className="flex items-center gap-1">
+                  <span className={
+                    issue.severity === 'critical' ? 'text-red-600' :
+                    issue.severity === 'warning' ? 'text-amber-600' : 'text-blue-600'
+                  }>•</span>
+                  {issue.title}
+                </li>
+              ))}
+              {remainingIssues.length > 5 && (
+                <li className="text-muted-foreground">...and {remainingIssues.length - 5} more</li>
+              )}
+            </ul>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleFixAllConfirmed}>
+            Fix All Issues
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   )
 }

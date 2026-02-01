@@ -1,32 +1,34 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { useDebounce } from 'react-use'
 import useCVStore from '@/lib/stores/cv-store'
 
 export function useAutoSave(delay = 2000) {
-  const { cvData, selectedCVId, saveToDB } = useCVStore()
-  const isInitialMount = useRef(true)
+  const { cvData, saveToDB, isInitialized } = useCVStore()
+  const skipNextSaveRef = useRef(true)
+  const prevInitializedRef = useRef(false)
 
-  // Skip auto-save on initial mount
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false
-      return
-    }
-  }, [])
+  // When isInitialized transitions from false to true, skip the next save
+  // (that save would just be saving the data we just loaded from DB)
+  if (isInitialized && !prevInitializedRef.current) {
+    prevInitializedRef.current = true
+    skipNextSaveRef.current = true
+  }
 
-  // Debounce the CV data changes
-  const [debouncedValue, setDebouncedValue] = useDebounce(
-    () => cvData,
+  // Debounce and save when cvData changes
+  useDebounce(
+    () => {
+      if (!isInitialized) return
+
+      if (skipNextSaveRef.current) {
+        skipNextSaveRef.current = false
+        return
+      }
+
+      saveToDB()
+    },
     delay,
     [cvData]
   )
-
-  // Auto-save when debounced value changes
-  useEffect(() => {
-    if (!isInitialMount.current && selectedCVId) {
-      saveToDB()
-    }
-  }, [debouncedValue])
 
   return null
 }

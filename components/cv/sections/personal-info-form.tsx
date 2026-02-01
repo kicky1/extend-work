@@ -7,14 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { Button } from '@/components/ui/button'
-import { AlignLeft, AlignCenter, SplitSquareHorizontal, Eye, EyeOff, Upload, X, User, ChevronDown } from 'lucide-react'
-import type { CVTheme } from '@/lib/types/cv'
-
-const headerStyles: { value: CVTheme['headerStyle']; label: string; icon: typeof AlignCenter }[] = [
-  { value: 'centered', label: 'Centered', icon: AlignCenter },
-  { value: 'left-aligned', label: 'Left', icon: AlignLeft },
-  { value: 'split', label: 'Split', icon: SplitSquareHorizontal },
-]
+import { Upload, X, User, ChevronDown } from 'lucide-react'
 
 interface AccordionSectionProps {
   title: string
@@ -56,7 +49,7 @@ function AccordionSection({ title, defaultOpen = true, children }: AccordionSect
 }
 
 export default function PersonalInfoForm() {
-  const { cvData, updatePersonalInfo, updateSummary, updateTheme } = useCVStore()
+  const { cvData, updatePersonalInfo, updateSummary } = useCVStore()
   const { personalInfo, summary } = cvData
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -240,59 +233,6 @@ export default function PersonalInfoForm() {
             placeholder="Write a brief professional summary highlighting your key skills and experience..."
           />
         </Field>
-      </AccordionSection>
-
-      <AccordionSection title="Header Layout" defaultOpen={false}>
-        <div className="space-y-6">
-          <div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Choose how your name and contact info appear
-            </p>
-            <div className="flex gap-2">
-              {headerStyles.map(({ value, label, icon: Icon }) => (
-                <button
-                  key={value}
-                  onClick={() => updateTheme({ headerStyle: value })}
-                  className={`flex-1 flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all ${
-                    cvData.theme.headerStyle === value
-                      ? 'border-primary bg-primary/5 text-primary'
-                      : 'border-border hover:border-primary/50 text-muted-foreground'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="text-xs font-medium">{label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Show Icons Toggle */}
-          <div>
-            <h4 className="text-sm font-medium text-foreground mb-2">Contact Icons</h4>
-            <button
-              onClick={() => updateTheme({ showHeaderIcons: !cvData.theme.showHeaderIcons })}
-              className={`flex items-center gap-3 w-full p-3 rounded-lg border transition-all ${
-                cvData.theme.showHeaderIcons
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/50'
-              }`}
-            >
-              {cvData.theme.showHeaderIcons ? (
-                <Eye className="w-5 h-5 text-primary" />
-              ) : (
-                <EyeOff className="w-5 h-5 text-muted-foreground" />
-              )}
-              <div className="text-left">
-                <span className={`text-sm font-medium ${cvData.theme.showHeaderIcons ? 'text-primary' : 'text-foreground'}`}>
-                  {cvData.theme.showHeaderIcons ? 'Icons Visible' : 'Icons Hidden'}
-                </span>
-                <p className="text-xs text-muted-foreground">
-                  {cvData.theme.showHeaderIcons ? 'Showing icons next to contact info' : 'Text only contact info'}
-                </p>
-              </div>
-            </button>
-          </div>
-        </div>
       </AccordionSection>
     </div>
   )

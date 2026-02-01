@@ -1,5 +1,6 @@
-import type { Skill, CVTheme } from '@/lib/types/cv'
+import type { Skill, CVTheme, SkillsStyle } from '@/lib/types/cv'
 import HighlightWrapper from './highlight-wrapper'
+import { Star, Code, Users, Wrench, Globe } from 'lucide-react'
 
 interface SkillsSectionProps {
   skills: Skill[]
@@ -11,6 +12,14 @@ const categoryLabels: Record<string, string> = {
   technical: 'Technical Skills',
   soft: 'Soft Skills',
   tool: 'Tools & Technologies',
+  language: 'Languages',
+}
+
+const categoryIcons: Record<string, typeof Code> = {
+  technical: Code,
+  soft: Users,
+  tool: Wrench,
+  language: Globe,
 }
 
 const levelToPercent = {
@@ -18,6 +27,13 @@ const levelToPercent = {
   intermediate: 50,
   advanced: 75,
   expert: 100,
+}
+
+const levelToStars = {
+  beginner: 1,
+  intermediate: 2,
+  advanced: 3,
+  expert: 4,
 }
 
 function SectionDivider({ style, color }: { style: CVTheme['sectionDivider']; color: string }) {
@@ -34,6 +50,7 @@ function SectionDivider({ style, color }: { style: CVTheme['sectionDivider']; co
   }
 }
 
+// Pills style
 function PillsStyle({ skills, theme }: { skills: Skill[]; theme: CVTheme }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -54,6 +71,7 @@ function PillsStyle({ skills, theme }: { skills: Skill[]; theme: CVTheme }) {
   )
 }
 
+// List style (grouped by category)
 function ListStyle({ skills, theme }: { skills: Skill[]; theme: CVTheme }) {
   const groupedSkills = skills.reduce((acc, skill) => {
     const category = skill.category
@@ -78,6 +96,7 @@ function ListStyle({ skills, theme }: { skills: Skill[]; theme: CVTheme }) {
   )
 }
 
+// Grid style
 function GridStyle({ skills, theme }: { skills: Skill[]; theme: CVTheme }) {
   const groupedSkills = skills.reduce((acc, skill) => {
     const category = skill.category
@@ -107,6 +126,7 @@ function GridStyle({ skills, theme }: { skills: Skill[]; theme: CVTheme }) {
   )
 }
 
+// Bars style
 function BarsStyle({ skills, theme }: { skills: Skill[]; theme: CVTheme }) {
   return (
     <div className="grid grid-cols-2 gap-x-6 gap-y-2">
@@ -131,8 +151,145 @@ function BarsStyle({ skills, theme }: { skills: Skill[]; theme: CVTheme }) {
   )
 }
 
+// Tags outlined style
+function TagsOutlinedStyle({ skills, theme }: { skills: Skill[]; theme: CVTheme }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {skills.map((skill) => (
+        <span
+          key={skill.id}
+          className="px-3 py-1 text-xs font-medium border-2 rounded"
+          style={{
+            borderColor: theme.colors.primary,
+            color: theme.colors.primary,
+            backgroundColor: 'transparent',
+          }}
+        >
+          {skill.name}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+// Chips style (Material Design inspired)
+function ChipsStyle({ skills, theme }: { skills: Skill[]; theme: CVTheme }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {skills.map((skill) => (
+        <span
+          key={skill.id}
+          className="px-3 py-1.5 text-xs font-medium rounded-full flex items-center gap-1.5"
+          style={{
+            backgroundColor: theme.colors.primary,
+            color: '#FFFFFF',
+          }}
+        >
+          <span className="w-1 h-1 rounded-full bg-white/60" />
+          {skill.name}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+// Icons style (with category icons)
+function IconsStyle({ skills, theme }: { skills: Skill[]; theme: CVTheme }) {
+  const groupedSkills = skills.reduce((acc, skill) => {
+    const category = skill.category
+    if (!acc[category]) acc[category] = []
+    acc[category].push(skill)
+    return acc
+  }, {} as Record<string, Skill[]>)
+
+  return (
+    <div className="space-y-4">
+      {Object.entries(groupedSkills).map(([category, categorySkills]) => {
+        const Icon = categoryIcons[category] || Code
+        return (
+          <div key={category}>
+            <div className="flex items-center gap-2 mb-2">
+              <Icon className="w-4 h-4" style={{ color: theme.colors.primary }} />
+              <h4 className="text-xs font-semibold uppercase tracking-wide" style={{ color: theme.colors.primary }}>
+                {categoryLabels[category] || category}
+              </h4>
+            </div>
+            <div className="flex flex-wrap gap-2 pl-6">
+              {categorySkills.map((skill) => (
+                <span
+                  key={skill.id}
+                  className="px-2.5 py-1 text-xs rounded"
+                  style={{
+                    backgroundColor: `${theme.colors.primary}10`,
+                    color: theme.colors.text,
+                  }}
+                >
+                  {skill.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// Rating stars style
+function RatingStarsStyle({ skills, theme }: { skills: Skill[]; theme: CVTheme }) {
+  return (
+    <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+      {skills.map((skill) => {
+        const starCount = levelToStars[skill.level || 'intermediate']
+        return (
+          <div key={skill.id} className="flex items-center justify-between text-sm">
+            <span className="font-medium" style={{ color: theme.colors.text }}>{skill.name}</span>
+            <div className="flex gap-0.5">
+              {[1, 2, 3, 4].map((star) => (
+                <Star
+                  key={star}
+                  className="w-3.5 h-3.5"
+                  style={{
+                    color: star <= starCount ? theme.colors.accent : '#E5E7EB',
+                    fill: star <= starCount ? theme.colors.accent : 'none',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// Percentage style
+function PercentageStyle({ skills, theme }: { skills: Skill[]; theme: CVTheme }) {
+  return (
+    <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+      {skills.map((skill) => {
+        const percent = levelToPercent[skill.level || 'intermediate']
+        return (
+          <div key={skill.id} className="flex items-center justify-between text-sm">
+            <span className="font-medium" style={{ color: theme.colors.text }}>{skill.name}</span>
+            <span
+              className="text-xs font-semibold px-2 py-0.5 rounded"
+              style={{
+                backgroundColor: `${theme.colors.primary}15`,
+                color: theme.colors.primary,
+              }}
+            >
+              {percent}%
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function SkillsSection({ skills, theme, compact = false }: SkillsSectionProps) {
-  const skillsStyle = theme.skillsStyle || 'list'
+  const skillsStyle: SkillsStyle = theme.skillsStyle || 'list'
 
   const renderSkills = () => {
     // In compact mode, always use list style for better fit in sidebar
@@ -146,6 +303,16 @@ export default function SkillsSection({ skills, theme, compact = false }: Skills
         return <GridStyle skills={skills} theme={theme} />
       case 'bars':
         return <BarsStyle skills={skills} theme={theme} />
+      case 'tags-outlined':
+        return <TagsOutlinedStyle skills={skills} theme={theme} />
+      case 'chips':
+        return <ChipsStyle skills={skills} theme={theme} />
+      case 'icons':
+        return <IconsStyle skills={skills} theme={theme} />
+      case 'rating-stars':
+        return <RatingStarsStyle skills={skills} theme={theme} />
+      case 'percentage':
+        return <PercentageStyle skills={skills} theme={theme} />
       case 'list':
       default:
         return <ListStyle skills={skills} theme={theme} />

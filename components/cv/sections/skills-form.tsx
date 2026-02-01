@@ -5,26 +5,21 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import useCVStore from '@/lib/stores/cv-store'
-import { Plus, Trash2, List, Circle, Grid3X3, BarChart3, X, Tag, ChevronDown, GripVertical } from 'lucide-react'
+import { Plus, Trash2, ChevronDown, GripVertical, Tag, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SortableList } from '@/components/ui/sortable'
-import type { CVTheme, Skill } from '@/lib/types/cv'
-
-const skillsStyles: { value: CVTheme['skillsStyle']; label: string; icon: typeof List; description: string }[] = [
-  { value: 'list', label: 'List', icon: List, description: 'Grouped by category' },
-  { value: 'pills', label: 'Pills', icon: Circle, description: 'Badge style' },
-  { value: 'grid', label: 'Grid', icon: Grid3X3, description: '2-column layout' },
-  { value: 'bars', label: 'Bars', icon: BarChart3, description: 'Proficiency bars' },
-]
+import type { Skill } from '@/lib/types/cv'
 
 const defaultCategories = [
   { label: 'Technical Skills', value: 'technical' },
   { label: 'Soft Skills', value: 'soft' },
   { label: 'Tools & Technologies', value: 'tool' },
 ]
+
+const defaultCategoryValues = ['technical', 'soft', 'tool']
 
 interface AccordionSectionProps {
   title: string
@@ -183,11 +178,11 @@ function DraggableSkillItem({ skill, allCategories, levelItems, onUpdate, onRemo
 }
 
 export default function SkillsForm() {
-  const { cvData, addSkill, updateSkill, removeSkill, updateSkills, updateTheme, addCustomCategory, removeCustomCategory } = useCVStore()
+  const { cvData, addSkill, updateSkill, removeSkill, updateSkills, addCustomCategory, removeCustomCategory } = useCVStore()
   const { skills, customSkillCategories = [] } = cvData
-  const [newCategory, setNewCategory] = useState('')
   const lastSkillRef = useRef<HTMLDivElement>(null)
   const prevSkillsLengthRef = useRef(skills.length)
+  const [newCategory, setNewCategory] = useState('')
 
   useEffect(() => {
     if (skills.length > prevSkillsLengthRef.current && lastSkillRef.current) {
@@ -201,14 +196,6 @@ export default function SkillsForm() {
     ...customSkillCategories.map(c => ({ label: c, value: c }))
   ]
 
-  const handleAddCategory = () => {
-    const trimmed = newCategory.trim()
-    if (trimmed && !allCategories.some(c => c.value.toLowerCase() === trimmed.toLowerCase())) {
-      addCustomCategory(trimmed)
-      setNewCategory('')
-    }
-  }
-
   const levelItems = [
     { label: 'Beginner', value: 'beginner' },
     { label: 'Intermediate', value: 'intermediate' },
@@ -216,8 +203,85 @@ export default function SkillsForm() {
     { label: 'Expert', value: 'expert' },
   ] as const
 
+  const handleAddCategory = () => {
+    const trimmed = newCategory.trim()
+    if (trimmed && !customSkillCategories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+      addCustomCategory(trimmed)
+      setNewCategory('')
+    }
+  }
+
   return (
     <div className="space-y-4">
+      {/* Skill Categories Section */}
+      <AccordionSection
+        title="Skill Categories"
+        defaultOpen={false}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Manage categories to organize your skills. Default categories cannot be removed.
+          </p>
+
+          {/* Add new category */}
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              placeholder="New category name..."
+              onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+              className="h-9 text-sm"
+            />
+            <Button onClick={handleAddCategory} size="sm" disabled={!newCategory.trim()} className="h-9">
+              <Plus className="w-4 h-4 mr-1" />
+              Add
+            </Button>
+          </div>
+
+          {/* Default categories */}
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">Default Categories</p>
+            <div className="flex flex-wrap gap-1.5">
+              {defaultCategories.map((category) => (
+                <div
+                  key={category.value}
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-muted text-muted-foreground rounded-md text-xs"
+                >
+                  <Tag className="w-3 h-3" />
+                  <span>{category.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom categories */}
+          {customSkillCategories.length > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Custom Categories</p>
+              <div className="flex flex-wrap gap-1.5">
+                {customSkillCategories.map((category) => (
+                  <div
+                    key={category}
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-primary/10 text-primary rounded-md text-xs"
+                  >
+                    <Tag className="w-3 h-3" />
+                    <span>{category}</span>
+                    <button
+                      onClick={() => removeCustomCategory(category)}
+                      className="ml-0.5 hover:text-destructive transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </AccordionSection>
+
+      {/* Skills Section */}
       <AccordionSection
         title="Skills"
         defaultOpen={true}
@@ -253,75 +317,6 @@ export default function SkillsForm() {
             ))}
           </SortableList>
         )}
-      </AccordionSection>
-
-      <AccordionSection title="Skill Categories" defaultOpen={false}>
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Add custom categories to organize your skills
-          </p>
-
-          {/* Add new category */}
-          <div className="flex gap-2">
-            <Input
-              type="text"
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
-              placeholder="New category name..."
-              onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
-            />
-            <Button onClick={handleAddCategory} size="sm" disabled={!newCategory.trim()}>
-              <Plus className="w-4 h-4 mr-1" />
-              Add
-            </Button>
-          </div>
-
-          {/* Custom categories list */}
-          {customSkillCategories.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {customSkillCategories.map((category) => (
-                <div
-                  key={category}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm"
-                >
-                  <Tag className="w-3 h-3" />
-                  <span>{category}</span>
-                  <button
-                    onClick={() => removeCustomCategory(category)}
-                    className="ml-1 hover:text-destructive transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </AccordionSection>
-
-      <AccordionSection title="Skills Display Style" defaultOpen={false}>
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Choose how your skills appear on the CV
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {skillsStyles.map(({ value, label, icon: Icon, description }) => (
-              <button
-                key={value}
-                onClick={() => updateTheme({ skillsStyle: value })}
-                className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-all text-center ${
-                  cvData.theme.skillsStyle === value
-                    ? 'border-primary bg-primary/5 text-primary'
-                    : 'border-border hover:border-primary/50 text-muted-foreground'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="text-sm font-medium">{label}</span>
-                <span className="text-xs opacity-70">{description}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </AccordionSection>
 
       {/* Tips Section */}

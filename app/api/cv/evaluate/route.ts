@@ -2,6 +2,8 @@ import { generateObject } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { createClient } from '@/lib/supabase/server'
+import { checkCanUseAI, recordAIUsage, truncateToTokenLimit } from '@/lib/ai/usage-guard'
 import type { CVData } from '@/lib/types/cv'
 
 const anthropic = createAnthropic({
@@ -171,6 +173,29 @@ Focus on actionable feedback. Be specific about what needs improvement and how.`
 
 export async function POST(req: NextRequest) {
   try {
+    // Get authenticated user
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check AI usage limits
+    const usageCheck = await checkCanUseAI(user.id)
+    if (!usageCheck.allowed) {
+      if (usageCheck.reason === 'not_pro') {
+        return NextResponse.json(
+          { error: 'AI features require a Pro subscription', code: 'NOT_PRO' },
+          { status: 403 }
+        )
+      }
+      return NextResponse.json(
+        { error: 'Monthly AI request limit reached', code: 'LIMIT_EXCEEDED', usage: usageCheck.usage },
+        { status: 429 }
+      )
+    }
+
     const { cvData, jobDescription, previousEvaluation, fixedIssueIds } = await req.json()
 
     if (!cvData) {
@@ -182,12 +207,15 @@ export async function POST(req: NextRequest) {
       ? { previousEvaluation, fixedIssueIds }
       : undefined
 
-    const prompt = buildEvaluationPrompt(cvData, jobDescription, reEvalContext)
+    const rawPrompt = buildEvaluationPrompt(cvData, jobDescription, reEvalContext)
+
+    // Truncate input to token limit
+    const prompt = truncateToTokenLimit(rawPrompt, usageCheck.tier)
 
     const isReEvaluation = !!reEvalContext
 
     const result = await generateObject({
-      model: anthropic('claude-sonnet-4-5-20250929'),
+      model: anthropic(process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929'),
       schema: CVEvaluationSchema,
       system: `You are an expert CV/resume evaluator with deep knowledge of hiring practices, ATS systems, and professional resume writing. Your job is to provide constructive, specific feedback to help job seekers improve their CVs.
 
@@ -217,9 +245,17 @@ ${isReEvaluation ? `5. RE-EVALUATION MODE: This is a re-evaluation after fixes. 
       temperature: 0, // Use temperature 0 for deterministic, consistent scoring
     })
 
+    // Record AI usage
+    await recordAIUsage(
+      user.id,
+      result.usage?.inputTokens ?? 0,
+      result.usage?.outputTokens ?? 0
+    )
+
     return NextResponse.json({
       ...result.object,
       timestamp: new Date().toISOString(),
+      usage: { current: (usageCheck.usage?.current ?? 0) + 1, limit: usageCheck.usage?.limit ?? 0 },
     })
   } catch (error: unknown) {
     console.error('CV evaluation error:', error)

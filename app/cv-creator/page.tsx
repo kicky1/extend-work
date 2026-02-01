@@ -1,20 +1,22 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import useCVStore from '@/lib/stores/cv-store'
 import { useAutoSave } from '@/lib/hooks/use-auto-save'
 import EditorPanel from '@/components/cv/editor-panel'
 import PreviewPanel from '@/components/cv/preview-panel'
-import ThemeCustomizer from '@/components/cv/theme-customizer'
+import { ThemeCustomizerButton, ThemeCustomizerPanel } from '@/components/cv/theme-customizer'
 import FloatingAIAssistant from '@/components/cv/floating-ai-assistant'
+import AppNavbar from '@/components/layout/app-navbar'
+import { useState } from 'react'
 
 export default function CVCreatorPage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor')
-  const { loadFromDB, getOrCreateCV } = useCVStore()
+  const [isCustomizing, setIsCustomizing] = useState(false)
+  const { getOrCreateCV, isInitialized } = useCVStore()
   const supabase = createClient()
 
   // Auto-save hook
@@ -32,51 +34,15 @@ export default function CVCreatorPage() {
       }
 
       // Load user's CV (creates one if doesn't exist)
-      const cvId = await getOrCreateCV()
-      if (cvId) {
-        await loadFromDB(cvId)
-      }
-
-      setLoading(false)
+      await getOrCreateCV()
     }
 
     checkUser()
   }, [])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading CV Creator...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-card border-b border-border px-4 py-3">
-        <div className="max-w-screen-2xl mx-auto flex items-center justify-between">
-          <h1 className="text-xl font-bold text-foreground">
-            CV Creator
-          </h1>
-          <div className="flex items-center gap-3">
-            {/* Logout Button */}
-            <button
-              onClick={async () => {
-                await supabase.auth.signOut()
-                router.push('/login')
-                router.refresh()
-              }}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppNavbar />
 
       {/* Mobile Tab Navigation */}
       <div className="lg:hidden bg-card border-b border-border">
@@ -106,23 +72,40 @@ export default function CVCreatorPage() {
 
       {/* Main Content - Split Layout */}
       <main className="max-w-screen-2xl mx-auto h-[calc(100vh-64px)]">
-        {/* Desktop: Side by Side */}
-        <div className="hidden lg:grid lg:grid-cols-2 h-full">
-          <EditorPanel />
-          <PreviewPanel />
+        {/* Desktop: Side by Side - Editor sticky, Preview scrolls */}
+        <div className="hidden lg:flex h-full">
+          <div className="w-1/2 sticky top-0 h-full">
+            {isCustomizing ? (
+              <ThemeCustomizerPanel onClose={() => setIsCustomizing(false)} />
+            ) : (
+              <EditorPanel />
+            )}
+          </div>
+          <div className="w-1/2 h-full">
+            <PreviewPanel />
+          </div>
         </div>
 
         {/* Mobile: Tabs */}
         <div className="lg:hidden h-full">
-          {activeTab === 'editor' ? <EditorPanel /> : <PreviewPanel />}
+          {isCustomizing ? (
+            <ThemeCustomizerPanel onClose={() => setIsCustomizing(false)} />
+          ) : activeTab === 'editor' ? (
+            <EditorPanel />
+          ) : (
+            <PreviewPanel />
+          )}
         </div>
       </main>
 
-      {/* Theme Customizer */}
-      <ThemeCustomizer />
+      {/* Theme Customizer Button */}
+      <ThemeCustomizerButton
+        isCustomizing={isCustomizing}
+        onClick={() => setIsCustomizing(!isCustomizing)}
+      />
 
-      {/* Floating AI Assistant */}
-      <FloatingAIAssistant />
+      {/* Floating AI Assistant - only show when data loaded */}
+      {isInitialized && <FloatingAIAssistant />}
     </div>
   )
 }

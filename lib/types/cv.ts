@@ -60,24 +60,201 @@ export interface Footer {
   rodoConsent: string
 }
 
+// Layout types - expanded from 4 to 10+
+export type CVLayout =
+  | 'classic'
+  | 'modern'
+  | 'minimal'
+  | 'two-column'
+  | 'sidebar-left'
+  | 'sidebar-right'
+  | 'top-banner'
+  | 'compact'
+  | 'timeline'
+  | 'magazine'
+  | 'card-based'
+  | 'infographic'
+
+// Header styles - expanded from 3 to 8, plus two-column specific styles
+export type HeaderStyle =
+  | 'centered'
+  | 'left-aligned'
+  | 'split'
+  | 'banner'
+  | 'compact'
+  | 'photo-focus'
+  | 'gradient'
+  | 'bordered'
+  // Two-column specific styles
+  | 'sidebar-header'      // Name/title in sidebar, contact in main
+  | 'split-header'        // Photo in sidebar, text in main
+  | 'compact-sidebar'     // Minimal header in sidebar
+  | 'banner-overlay'      // Banner spanning top with sidebar overlap
+
+// Experience section styles (NEW)
+export type ExperienceStyle =
+  | 'classic'
+  | 'timeline'
+  | 'cards'
+  | 'compact'
+  | 'detailed'
+
+// Education section styles (NEW)
+export type EducationStyle =
+  | 'classic'
+  | 'cards'
+  | 'compact'
+  | 'academic'
+
+// Skills styles - expanded from 4 to 9
+export type SkillsStyle =
+  | 'pills'
+  | 'list'
+  | 'grid'
+  | 'bars'
+  | 'tags-outlined'
+  | 'chips'
+  | 'icons'
+  | 'rating-stars'
+  | 'percentage'
+
+// Languages styles
+export type LanguagesStyle = 'inline' | 'pills' | 'bars' | 'grid'
+
+// Section divider styles
+export type SectionDividerStyle = 'line' | 'none' | 'dotted' | 'accent-bar'
+
+// Bullet styles
+export type BulletStyle = 'disc' | 'circle' | 'square' | 'dash' | 'arrow'
+
+// Photo styles (legacy - kept for backward compat)
+export type PhotoStyle =
+  | 'circle'
+  | 'square'
+  | 'rounded'
+  | 'bordered'
+  | 'none'
+
+// Enhanced Photo Theme (NEW)
+export interface PhotoTheme {
+  shape: 'circle' | 'square' | 'rounded' | 'hexagon'
+  border: 'none' | 'thin' | 'thick' | 'double'
+  borderColor: 'primary' | 'accent' | 'white' | 'gray'
+  shadow: 'none' | 'subtle' | 'medium' | 'strong'
+  background: 'none' | 'ring' | 'gradient-ring'
+  size: 'sm' | 'md' | 'lg' | 'xl'
+  visible: boolean
+}
+
+// Sidebar Style (NEW)
+export interface SidebarStyle {
+  corners: 'none' | 'subtle' | 'rounded' | 'pill'
+  background: 'solid' | 'light' | 'gradient' | 'none'
+  border: 'none' | 'subtle' | 'accent'
+  fullHeight: boolean
+  width: 25 | 30 | 35 | 40
+}
+
+// Summary styles (NEW), plus two-column specific styles
+export type SummaryStyle =
+  | 'plain'
+  | 'boxed'
+  | 'quoted'
+  | 'highlighted'
+  | 'sidebar'
+  // Two-column specific styles
+  | 'sidebar-summary'     // Summary in sidebar area
+  | 'main-summary'        // Summary in main content area
+  | 'split-summary'       // Split across columns
+  | 'boxed-sidebar'       // Boxed style in sidebar
+
+// Date format options (NEW)
+export type DateFormat =
+  | 'full'      // January 2024
+  | 'short'     // Jan 2024
+  | 'numeric'   // 01/2024
+  | 'year-only' // 2024
+
+// Spacing/density options (NEW)
+export type SpacingDensity =
+  | 'compact'
+  | 'normal'
+  | 'relaxed'
+
+// Border styles for sections (NEW)
+export type SectionBorderStyle =
+  | 'none'
+  | 'subtle'
+  | 'card'
+  | 'shadow'
+  | 'accent-left'
+
+// Theme category for template browser
+export type ThemeCategory =
+  | 'industry'
+  | 'style'
+  | 'specialty'
+
+// Industry type for AI auto-suggest
+export type Industry =
+  | 'tech'
+  | 'finance'
+  | 'healthcare'
+  | 'legal'
+  | 'academia'
+  | 'creative'
+  | 'engineering'
+  | 'marketing'
+  | 'consulting'
+  | 'retail'
+  | 'government'
+  | 'general'
+
 export interface CVTheme {
+  // Theme metadata
+  id?: string
+  name?: string
+  category?: ThemeCategory
+  industry?: Industry
+  description?: string
+
   colors: {
     primary: string
     accent: string
     text: string
     background: string
+    secondary?: string
+    muted?: string
   }
   fonts: {
     heading: string
     body: string
   }
-  layout: 'classic' | 'modern' | 'minimal' | 'two-column'
-  // Style variations
-  headerStyle: 'centered' | 'left-aligned' | 'split'
-  skillsStyle: 'pills' | 'list' | 'grid' | 'bars'
-  languagesStyle: 'inline' | 'pills' | 'bars' | 'grid'
-  sectionDivider: 'line' | 'none' | 'dotted' | 'accent-bar'
-  bulletStyle: 'disc' | 'circle' | 'square' | 'dash' | 'arrow'
+
+  // Layout
+  layout: CVLayout
+  spacing?: SpacingDensity
+
+  // Section styles
+  headerStyle: HeaderStyle
+  experienceStyle?: ExperienceStyle
+  educationStyle?: EducationStyle
+  skillsStyle: SkillsStyle
+  languagesStyle: LanguagesStyle
+  summaryStyle?: SummaryStyle
+
+  // Visual elements
+  sectionDivider: SectionDividerStyle
+  sectionBorder?: SectionBorderStyle
+  bulletStyle: BulletStyle
+  photoStyle?: PhotoStyle
+  photoTheme?: PhotoTheme
+  dateFormat?: DateFormat
+
+  // Sidebar styling (for sidebar layouts)
+  sidebarStyle?: SidebarStyle
+
+  // Options
   showHeaderIcons: boolean
   pageNumbers?: {
     show: boolean
@@ -117,6 +294,24 @@ export interface CV {
   updated_at: string
 }
 
+export const defaultPhotoTheme: PhotoTheme = {
+  shape: 'circle',
+  border: 'thin',
+  borderColor: 'gray',
+  shadow: 'none',
+  background: 'none',
+  size: 'md',
+  visible: true,
+}
+
+export const defaultSidebarStyle: SidebarStyle = {
+  corners: 'subtle',
+  background: 'light',
+  border: 'none',
+  fullHeight: false,
+  width: 30,
+}
+
 export const defaultCVTheme: CVTheme = {
   colors: {
     primary: '#000000',
@@ -129,11 +324,20 @@ export const defaultCVTheme: CVTheme = {
     body: 'Arial',
   },
   layout: 'classic',
+  spacing: 'normal',
   headerStyle: 'left-aligned',
+  experienceStyle: 'classic',
+  educationStyle: 'classic',
   skillsStyle: 'list',
   languagesStyle: 'inline',
+  summaryStyle: 'plain',
   sectionDivider: 'none',
+  sectionBorder: 'none',
   bulletStyle: 'disc',
+  photoStyle: 'circle',
+  photoTheme: defaultPhotoTheme,
+  dateFormat: 'short',
+  sidebarStyle: defaultSidebarStyle,
   showHeaderIcons: false,
   pageNumbers: {
     show: false,
@@ -142,13 +346,13 @@ export const defaultCVTheme: CVTheme = {
 }
 
 export const defaultPersonalInfo: PersonalInfo = {
-  fullName: 'Alex Johnson',
-  email: 'alex.johnson@email.com',
-  phone: '+1 (555) 123-4567',
-  location: 'San Francisco, CA',
-  website: 'https://alexjohnson.dev',
-  linkedIn: 'linkedin.com/in/alexjohnson',
-  github: 'github.com/alexjohnson',
+  fullName: '',
+  email: '',
+  phone: '',
+  location: '',
+  website: '',
+  linkedIn: '',
+  github: '',
 }
 
 export const defaultFooter: Footer = {
@@ -157,72 +361,11 @@ export const defaultFooter: Footer = {
 
 export const defaultCVData: Omit<CVData, 'id' | 'userId' | 'createdAt' | 'updatedAt'> = {
   personalInfo: defaultPersonalInfo,
-  summary: 'Experienced Full-Stack Developer with 5+ years of expertise in building scalable web applications. Proficient in React, Node.js, and cloud technologies. Passionate about creating intuitive user experiences and writing clean, maintainable code. Strong track record of leading technical projects and mentoring junior developers.',
-  workExperience: [
-    {
-      id: 'work-1',
-      company: 'TechCorp Solutions',
-      position: 'Senior Full-Stack Developer',
-      startDate: '2022-03',
-      endDate: '',
-      current: true,
-      location: 'San Francisco, CA',
-      description: 'Leading development of enterprise web applications using modern tech stack',
-      achievements: [
-        'Architected and deployed microservices infrastructure serving 100K+ daily users',
-        'Reduced application load time by 40% through performance optimization',
-        'Mentored team of 5 junior developers and conducted code reviews',
-        'Implemented CI/CD pipeline reducing deployment time by 60%'
-      ]
-    },
-    {
-      id: 'work-2',
-      company: 'StartupHub Inc',
-      position: 'Full-Stack Developer',
-      startDate: '2019-06',
-      endDate: '2022-02',
-      current: false,
-      location: 'Remote',
-      description: 'Developed and maintained customer-facing web applications',
-      achievements: [
-        'Built RESTful APIs and responsive frontend interfaces using React and Node.js',
-        'Collaborated with product team to deliver features on schedule',
-        'Improved test coverage from 45% to 85% through comprehensive unit testing',
-        'Optimized database queries resulting in 30% faster response times'
-      ]
-    }
-  ],
-  education: [
-    {
-      id: 'edu-1',
-      institution: 'University of California, Berkeley',
-      degree: 'Bachelor of Science',
-      field: 'Computer Science',
-      startDate: '2015-09',
-      endDate: '2019-05',
-      current: false,
-      gpa: '3.8',
-      description: 'Focus on Software Engineering and Artificial Intelligence'
-    }
-  ],
-  skills: [
-    { id: 'skill-1', name: 'JavaScript/TypeScript', category: 'technical', level: 'expert' },
-    { id: 'skill-2', name: 'React', category: 'technical', level: 'expert' },
-    { id: 'skill-3', name: 'Node.js', category: 'technical', level: 'advanced' },
-    { id: 'skill-4', name: 'Next.js', category: 'technical', level: 'advanced' },
-    { id: 'skill-5', name: 'Python', category: 'technical', level: 'intermediate' },
-    { id: 'skill-6', name: 'PostgreSQL', category: 'technical', level: 'advanced' },
-    { id: 'skill-7', name: 'MongoDB', category: 'technical', level: 'intermediate' },
-    { id: 'skill-8', name: 'Git', category: 'tool', level: 'expert' },
-    { id: 'skill-9', name: 'Docker', category: 'tool', level: 'advanced' },
-    { id: 'skill-10', name: 'AWS', category: 'tool', level: 'intermediate' },
-    { id: 'skill-11', name: 'Problem Solving', category: 'soft', level: 'expert' },
-    { id: 'skill-12', name: 'Team Collaboration', category: 'soft', level: 'expert' },
-  ],
-  languages: [
-    { id: 'lang-1', name: 'English', level: 'expert' },
-    { id: 'lang-2', name: 'Spanish', level: 'intermediate' },
-  ],
+  summary: '',
+  workExperience: [],
+  education: [],
+  skills: [],
+  languages: [],
   certificates: [],
   theme: defaultCVTheme,
   sectionOrder: defaultSectionOrder,

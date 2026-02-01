@@ -5,19 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import useCVStore from '@/lib/stores/cv-store'
-import { Plus, Trash2, GripVertical, ChevronDown, Type, Circle, BarChart3, Grid3X3 } from 'lucide-react'
+import { Plus, Trash2, GripVertical, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SortableList } from '@/components/ui/sortable'
-import type { Language, CVTheme } from '@/lib/types/cv'
-
-const languagesStyles: { value: CVTheme['languagesStyle']; label: string; icon: typeof Type; description: string }[] = [
-  { value: 'inline', label: 'Inline', icon: Type, description: 'Comma separated' },
-  { value: 'pills', label: 'Pills', icon: Circle, description: 'Badge style' },
-  { value: 'bars', label: 'Bars', icon: BarChart3, description: 'Proficiency bars' },
-  { value: 'grid', label: 'Grid', icon: Grid3X3, description: '2-column layout' },
-]
+import type { Language } from '@/lib/types/cv'
 
 interface AccordionSectionProps {
   title: string
@@ -162,7 +155,7 @@ function DraggableLanguageItem({ language, onUpdate, onRemove, itemRef }: Dragga
 }
 
 export default function LanguagesForm() {
-  const { cvData, addLanguage, updateLanguage, removeLanguage, updateLanguages, updateTheme } = useCVStore()
+  const { cvData, addLanguage, updateLanguage, removeLanguage, updateLanguages } = useCVStore()
   const { languages } = cvData
   const lastLanguageRef = useRef<HTMLDivElement>(null)
   const prevLanguagesLengthRef = useRef(languages.length)
@@ -209,31 +202,6 @@ export default function LanguagesForm() {
             ))}
           </SortableList>
         )}
-      </AccordionSection>
-
-      <AccordionSection title="Languages Display Style" defaultOpen={false}>
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Choose how your languages appear on the CV
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {languagesStyles.map(({ value, label, icon: Icon, description }) => (
-              <button
-                key={value}
-                onClick={() => updateTheme({ languagesStyle: value })}
-                className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-all text-center ${
-                  cvData.theme.languagesStyle === value
-                    ? 'border-primary bg-primary/5 text-primary'
-                    : 'border-border hover:border-primary/50 text-muted-foreground'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="text-sm font-medium">{label}</span>
-                <span className="text-xs opacity-70">{description}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </AccordionSection>
 
       {/* Tips Section */}

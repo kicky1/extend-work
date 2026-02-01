@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import useCVStore from '@/lib/stores/cv-store'
 import PersonalInfoForm from './sections/personal-info-form'
 import WorkExperienceForm from './sections/work-experience-form'
 import EducationForm from './sections/education-form'
@@ -9,10 +10,43 @@ import LanguagesForm from './sections/languages-form'
 import CertificatesForm from './sections/certificates-form'
 import FooterForm from './sections/footer-form'
 
+function FormContentSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="h-6 w-32 bg-muted rounded" />
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <div className="h-4 w-24 bg-muted rounded" />
+          <div className="h-10 w-full bg-muted rounded" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="h-4 w-16 bg-muted rounded" />
+            <div className="h-10 w-full bg-muted rounded" />
+          </div>
+          <div className="space-y-2">
+            <div className="h-4 w-20 bg-muted rounded" />
+            <div className="h-10 w-full bg-muted rounded" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="h-4 w-28 bg-muted rounded" />
+          <div className="h-24 w-full bg-muted rounded" />
+        </div>
+        <div className="space-y-2">
+          <div className="h-4 w-20 bg-muted rounded" />
+          <div className="h-10 w-full bg-muted rounded" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 type Section = 'personal' | 'experience' | 'education' | 'skills' | 'languages' | 'certificates' | 'footer'
 
 export default function EditorPanel() {
   const [activeSection, setActiveSection] = useState<Section>('personal')
+  const { isInitialized } = useCVStore()
 
   const sections = [
     { id: 'personal' as Section, label: 'Personal Info' },
@@ -47,13 +81,19 @@ export default function EditorPanel() {
 
       {/* Form Content */}
       <div className="flex-1 overflow-y-auto p-6">
-        {activeSection === 'personal' && <PersonalInfoForm />}
-        {activeSection === 'experience' && <WorkExperienceForm />}
-        {activeSection === 'education' && <EducationForm />}
-        {activeSection === 'skills' && <SkillsForm />}
-        {activeSection === 'languages' && <LanguagesForm />}
-        {activeSection === 'certificates' && <CertificatesForm />}
-        {activeSection === 'footer' && <FooterForm />}
+        {!isInitialized ? (
+          <FormContentSkeleton />
+        ) : (
+          <>
+            {activeSection === 'personal' && <PersonalInfoForm />}
+            {activeSection === 'experience' && <WorkExperienceForm />}
+            {activeSection === 'education' && <EducationForm />}
+            {activeSection === 'skills' && <SkillsForm />}
+            {activeSection === 'languages' && <LanguagesForm />}
+            {activeSection === 'certificates' && <CertificatesForm />}
+            {activeSection === 'footer' && <FooterForm />}
+          </>
+        )}
       </div>
     </div>
   )

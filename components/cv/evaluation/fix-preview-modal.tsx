@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react'
 import { X, Loader2, CheckCircle, AlertCircle, Wand2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { CVIssue } from '@/lib/types/cv-evaluation'
-import type { ToolCall } from '@/lib/utils/execute-tool-calls'
-import { executeToolCalls, describeToolCalls } from '@/lib/utils/execute-tool-calls'
+import { applyToolResults, describeToolResults, type ToolResult } from '@/lib/utils/apply-tool-results'
 import useCVStore from '@/lib/stores/cv-store'
 
 interface FixPreviewModalProps {
@@ -18,7 +17,7 @@ type ModalState = 'loading' | 'preview' | 'applying' | 'success' | 'error'
 
 export default function FixPreviewModal({ issue, onClose, onFixApplied }: FixPreviewModalProps) {
   const [state, setState] = useState<ModalState>('loading')
-  const [toolCalls, setToolCalls] = useState<ToolCall[]>([])
+  const [toolResults, setToolResults] = useState<ToolResult[]>([])
   const [explanation, setExplanation] = useState('')
   const [error, setError] = useState('')
   const { cvData } = useCVStore()
@@ -45,7 +44,7 @@ export default function FixPreviewModal({ issue, onClose, onFixApplied }: FixPre
       }
 
       const data = await response.json()
-      setToolCalls(data.toolCalls || [])
+      setToolResults(data.toolResults || [])
       setExplanation(data.explanation || '')
       setState('preview')
     } catch (err) {
@@ -58,7 +57,7 @@ export default function FixPreviewModal({ issue, onClose, onFixApplied }: FixPre
     setState('applying')
 
     try {
-      executeToolCalls(toolCalls)
+      applyToolResults(toolResults)
       setState('success')
 
       // Notify parent that fix was applied
@@ -72,7 +71,7 @@ export default function FixPreviewModal({ issue, onClose, onFixApplied }: FixPre
     }
   }
 
-  const descriptions = describeToolCalls(toolCalls)
+  const descriptions = describeToolResults(toolResults)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -175,7 +174,7 @@ export default function FixPreviewModal({ issue, onClose, onFixApplied }: FixPre
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button onClick={handleApply} disabled={toolCalls.length === 0}>
+            <Button onClick={handleApply} disabled={toolResults.length === 0}>
               Apply Fix
             </Button>
           </div>

@@ -22,6 +22,7 @@ interface CVStore {
   selectedCVId: string | null
   saveStatus: 'idle' | 'saving' | 'saved' | 'error'
   error: string | null
+  isInitialized: boolean
 
   // Personal Info Actions
   updatePersonalInfo: (info: Partial<PersonalInfo>) => void
@@ -84,6 +85,7 @@ const useCVStore = create<CVStore>((set, get) => ({
   selectedCVId: null,
   saveStatus: 'idle',
   error: null,
+  isInitialized: false,
 
   // Personal Info Actions
   updatePersonalInfo: (info) =>
@@ -361,7 +363,11 @@ const useCVStore = create<CVStore>((set, get) => ({
 
   // Database Actions
   saveToDB: async () => {
-    const { cvData, selectedCVId } = get()
+    const { cvData, selectedCVId, isInitialized } = get()
+
+    // Don't save before initial load completes
+    if (!isInitialized) return
+
     const supabase = createClient()
 
     set({ saveStatus: 'saving', error: null })
@@ -373,34 +379,24 @@ const useCVStore = create<CVStore>((set, get) => ({
 
       if (!user) throw new Error('Not authenticated')
 
-      if (selectedCVId) {
-        // Update existing CV
-        const { error } = await supabase
-          .from('cvs')
-          .update({
+      // Use upsert with user_id conflict to ensure one CV per user
+      const { data, error } = await supabase
+        .from('cvs')
+        .upsert(
+          {
+            user_id: user.id,
+            title: cvData.personalInfo.fullName || 'My CV',
             data: cvData,
             theme: cvData.theme,
             updated_at: new Date().toISOString(),
-          })
-          .eq('id', selectedCVId)
+          },
+          { onConflict: 'user_id' }
+        )
+        .select()
+        .single()
 
-        if (error) throw error
-      } else {
-        // Create new CV
-        const { data, error } = await supabase
-          .from('cvs')
-          .insert({
-            user_id: user.id,
-            title: cvData.personalInfo.fullName || 'Untitled CV',
-            data: cvData,
-            theme: cvData.theme,
-          })
-          .select()
-          .single()
-
-        if (error) throw error
-        if (data) set({ selectedCVId: data.id })
-      }
+      if (error) throw error
+      if (data && !selectedCVId) set({ selectedCVId: data.id })
 
       set({ saveStatus: 'saved' })
       setTimeout(() => set({ saveStatus: 'idle' }), 2000)
@@ -428,10 +424,11 @@ const useCVStore = create<CVStore>((set, get) => ({
           selectedCVId: data.id,
           saveStatus: 'idle',
           error: null,
+          isInitialized: true,
         })
       }
     } catch (error: any) {
-      set({ error: error.message })
+      set({ error: error.message, isInitialized: true })
       console.error('Error loading CV:', error)
     }
   },
@@ -449,11 +446,19 @@ const useCVStore = create<CVStore>((set, get) => ({
       // Try to get existing CV
       const { data: existingCV } = await supabase
         .from('cvs')
-        .select('id')
+        .select('*')
         .eq('user_id', user.id)
         .single()
 
       if (existingCV) {
+        // Set both selectedCVId AND load the data
+        set({
+          cvData: existingCV.data,
+          selectedCVId: existingCV.id,
+          saveStatus: 'idle',
+          error: null,
+          isInitialized: true,
+        })
         return existingCV.id
       }
 
@@ -477,13 +482,14 @@ const useCVStore = create<CVStore>((set, get) => ({
           selectedCVId: newCV.id,
           saveStatus: 'idle',
           error: null,
+          isInitialized: true,
         })
         return newCV.id
       }
 
       return null
     } catch (error: any) {
-      set({ error: error.message })
+      set({ error: error.message, isInitialized: true })
       console.error('Error getting/creating CV:', error)
       return null
     }
@@ -497,6 +503,7 @@ const useCVStore = create<CVStore>((set, get) => ({
       selectedCVId: null,
       saveStatus: 'idle',
       error: null,
+      isInitialized: false,
     }),
 }))
 

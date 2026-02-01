@@ -68,22 +68,16 @@ export default function CVPage({
           height: '100%',
         }}
       >
-        {/* Main content area */}
+        {/* Main content area - flex-1 to fill space, min-h-0 for proper flex behavior */}
         <div
-          className={`${isEditing ? '' : 'overflow-hidden'}`}
-          style={{
-            maxHeight: isEditing ? undefined : `${A4_CONTENT_HEIGHT - pageNumberHeight}px`,
-          }}
+          className={`flex-1 min-h-0 ${isEditing ? '' : 'overflow-hidden'}`}
         >
           {children}
         </div>
 
-        {/* Spacer to push footer to bottom */}
-        {footer && <div className="flex-1" />}
-
         {/* Footer - pinned to bottom of last page */}
         {footer && (
-          <div className="shrink-0">
+          <div className="shrink-0 mt-auto">
             {footer}
           </div>
         )}
