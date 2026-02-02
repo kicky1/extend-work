@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Check, X } from 'lucide-react'
@@ -11,8 +11,12 @@ interface PricingData {
   yearly: { priceId: string; amount: number; currency: string }
 }
 
+// Custom easing (ease-custom-curves, ease-out-default)
+const easeOut = [0.22, 1, 0.36, 1] as const
+
+// Percentage-based transform (transform-percentage-translate)
 const fadeUp = {
-  initial: { opacity: 0, y: 30 },
+  initial: { opacity: 0, y: '20%' },
   animate: { opacity: 1, y: 0 },
 }
 
@@ -42,6 +46,7 @@ export function PricingSection() {
   const [isYearly, setIsYearly] = useState(true)
   const [pricing, setPricing] = useState<PricingData | null>(null)
   const [loading, setLoading] = useState(true)
+  const shouldReduceMotion = useReducedMotion()
 
   useEffect(() => {
     fetch('/api/pricing')
@@ -82,10 +87,10 @@ export function PricingSection() {
 
       <div className="max-w-5xl mx-auto relative">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.25, ease: easeOut }}
           className="text-center mb-12"
         >
           <h2 className="text-3xl sm:text-4xl font-bold text-[#1a2a2a] mb-4">
@@ -124,13 +129,13 @@ export function PricingSection() {
         </motion.div>
 
         <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {/* Free Plan */}
+          {/* Free Plan - timing-300ms-max */}
           <motion.div
             variants={fadeUp}
             initial="initial"
             whileInView="animate"
             viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
+            transition={{ duration: 0.25, delay: 0.05, ease: easeOut }}
             className="relative p-8 rounded-2xl bg-[#faf9f7] border border-[#e8e4df] hover:border-[#1a4a4a]/20 transition-colors"
           >
             <div className="mb-6">
@@ -177,13 +182,13 @@ export function PricingSection() {
             </div>
           </motion.div>
 
-          {/* Pro Plan */}
+          {/* Pro Plan - timing-300ms-max */}
           <motion.div
             variants={fadeUp}
             initial="initial"
             whileInView="animate"
             viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            transition={{ duration: 0.25, delay: 0.1, ease: easeOut }}
             className="relative p-8 rounded-2xl bg-white border-2 border-[#1a4a4a] shadow-xl"
           >
             {/* Popular badge */}
@@ -243,7 +248,7 @@ export function PricingSection() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.2, duration: 0.2 }}
           className="text-center text-sm text-[#8a9a9a] mt-8"
         >
           Cancel anytime. No questions asked.
