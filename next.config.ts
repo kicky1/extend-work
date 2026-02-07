@@ -17,6 +17,14 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: '**.supabase.co',
       },
+      {
+        protocol: 'https',
+        hostname: 'utfs.io',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.ufs.sh',
+      },
     ],
   },
   async headers() {
@@ -30,8 +38,9 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "frame-src https://checkout.stripe.com https://js.stripe.com https://hooks.stripe.com",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.stripe.com https://js.stripe.com",
-              "connect-src 'self' https://*.supabase.co https://checkout.stripe.com https://api.stripe.com",
+              "connect-src 'self' https://*.supabase.co https://checkout.stripe.com https://api.stripe.com https://utfs.io https://*.ufs.sh",
               "img-src 'self' data: https: blob:",
+              "media-src 'self' https://utfs.io https://*.ufs.sh",
               "style-src 'self' 'unsafe-inline'",
             ].join('; '),
           },

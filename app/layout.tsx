@@ -55,6 +55,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={dmSans.variable}>
+      <head>
+        <link rel="preconnect" href="https://utfs.io" />
+        <link rel="dns-prefetch" href="https://utfs.io" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,7 @@ import { FileText, ScrollText, Briefcase, Mail, CalendarDays, Play } from 'lucid
 import { MarketingNav } from '@/components/seo/marketing-nav'
 import { MarketingFooter } from '@/components/seo/marketing-footer'
 import { PricingSection } from '@/components/landing/pricing-section'
+import { VideoPlayer } from '@/components/landing/video-player'
 import { ScaledCVPreview } from '@/components/cv/preview/scaled-cv-preview'
 import { exampleCVs } from '@/lib/example-cvs'
 import type { CVData } from '@/lib/types/cv'
@@ -828,9 +829,28 @@ const modules = [
   },
 ]
 
+const moduleVideoKeys: Record<string, string> = {
+  cv: 'zGi357RvYr0HyeC5gHS8RpFtCvxno3f6Hbi9YmNezT5hErw1',
+  'cover-letter': 'zGi357RvYr0HHCFqElelwHy9hJQsDUZ1ciTK7f4NGAW8bPpF',
+  jobs: 'zGi357RvYr0HqQNkqPwxjNOLveHQlomMazSIRC8h5pifnYJ2',
+}
+const allVideoUrls = Object.values(moduleVideoKeys).map((k) => `https://utfs.io/f/${k}`)
+
 function ModulesSection({ shouldReduceMotion }: { shouldReduceMotion: boolean | null }) {
   const [activeTab, setActiveTab] = useState(0)
   const activeModule = modules[activeTab]
+
+  const advanceTab = useCallback(() => {
+    setActiveTab((prev) => (prev + 1) % modules.length)
+  }, [])
+
+  // Auto-advance for tabs without a video (placeholder tabs)
+  const hasVideo = activeModule.id in moduleVideoKeys
+  useEffect(() => {
+    if (hasVideo) return
+    const timer = setTimeout(advanceTab, 5000)
+    return () => clearTimeout(timer)
+  }, [hasVideo, advanceTab, activeTab])
 
   return (
     <section id="modules" className="relative px-6 py-24 bg-white overflow-hidden">
@@ -884,7 +904,26 @@ function ModulesSection({ shouldReduceMotion }: { shouldReduceMotion: boolean | 
           })}
         </div>
 
-        {/* Video + details */}
+        {/* Video — swaps instantly, no animation */}
+        {(() => {
+          const key = moduleVideoKeys[activeModule.id]
+          return key ? (
+            <div className="rounded-2xl overflow-hidden shadow-xl border border-[#e8e4df] bg-[#1a2a2a]">
+              <VideoPlayer
+                src={`https://utfs.io/f/${key}`}
+                prefetchSrcs={allVideoUrls}
+                className="w-full block"
+                autoPlay
+                muted
+                onEnded={advanceTab}
+              />
+            </div>
+          ) : (
+            <VideoPlaceholder icon={activeModule.icon} />
+          )
+        })()}
+
+        {/* Text details — animate on tab switch */}
         <AnimatePresence mode="wait">
           <motion.div
             key={activeModule.id}
@@ -892,25 +931,22 @@ function ModulesSection({ shouldReduceMotion }: { shouldReduceMotion: boolean | 
             animate={{ opacity: 1, y: 0 }}
             exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -12 }}
             transition={{ duration: 0.25, ease: easeOut }}
+            className="mt-6 text-center"
           >
-            <VideoPlaceholder icon={activeModule.icon} />
-
-            <div className="mt-6 text-center">
-              <h3 className="text-xl font-semibold text-[#1a2a2a] mb-2">
-                {activeModule.title}
-              </h3>
-              <p className="text-[#5a6a6a] mb-4 max-w-lg mx-auto">
-                {activeModule.description}
-              </p>
-              <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2">
-                {activeModule.features.map((feature, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm text-[#5a6a6a]">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#1a4a4a]/20" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <h3 className="text-xl font-semibold text-[#1a2a2a] mb-2">
+              {activeModule.title}
+            </h3>
+            <p className="text-[#5a6a6a] mb-4 max-w-lg mx-auto">
+              {activeModule.description}
+            </p>
+            <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+              {activeModule.features.map((feature, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm text-[#5a6a6a]">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#1a4a4a]/20" />
+                  {feature}
+                </li>
+              ))}
+            </ul>
           </motion.div>
         </AnimatePresence>
       </div>
