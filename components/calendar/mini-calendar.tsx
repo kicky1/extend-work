@@ -46,9 +46,9 @@ export function MiniCalendar({
   }
 
   const hasInterviewOnDate = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = format(date, 'yyyy-MM-dd')
     return interviews.some((interview) => {
-      const interviewDate = new Date(interview.scheduledAt).toISOString().split('T')[0]
+      const interviewDate = format(new Date(interview.scheduledAt), 'yyyy-MM-dd')
       return interviewDate === dateStr
     })
   }

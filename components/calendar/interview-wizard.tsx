@@ -12,6 +12,7 @@ import { defaultInterviewFormData } from '@/lib/types/interview'
 
 interface InterviewWizardProps {
   initialDate?: Date
+  initialData?: Partial<InterviewFormData>
   interviews?: Interview[]
   onSubmit: (data: InterviewFormData) => Promise<void>
   onCancel: () => void
@@ -28,13 +29,19 @@ const steps: { id: WizardStep; label: string }[] = [
 
 export function InterviewWizard({
   initialDate,
+  initialData,
   interviews = [],
   onSubmit,
   onCancel,
   isLoading = false,
 }: InterviewWizardProps) {
-  const [currentStep, setCurrentStep] = useState<WizardStep>('type')
-  const [completedSteps, setCompletedSteps] = useState<Set<WizardStep>>(new Set())
+  // Auto-advance: if initialData has company+position+type pre-filled, start at schedule step
+  const prefilled = !!(initialData?.company && initialData?.position && initialData?.interviewType)
+
+  const [currentStep, setCurrentStep] = useState<WizardStep>(prefilled ? 'schedule' : 'type')
+  const [completedSteps, setCompletedSteps] = useState<Set<WizardStep>>(
+    () => new Set(prefilled ? ['type'] as WizardStep[] : [])
+  )
 
   const [formData, setFormData] = useState<InterviewFormData>(() => {
     const date = initialDate || new Date()
@@ -44,6 +51,7 @@ export function InterviewWizard({
     return {
       ...defaultInterviewFormData,
       scheduledAt: date.toISOString(),
+      ...initialData,
     }
   })
 

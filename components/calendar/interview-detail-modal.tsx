@@ -16,6 +16,7 @@ import {
   CheckCircle,
   XCircle,
   RotateCcw,
+  GitBranch,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -47,6 +48,7 @@ import {
 import { InterviewForm } from './interview-form'
 import { InterviewTypeIcon } from './interview-icons'
 import type { InterviewFormData } from '@/lib/types/interview'
+import useRecruitmentStore from '@/lib/stores/recruitment-store'
 
 interface InterviewDetailModalProps {
   interview: Interview
@@ -81,6 +83,9 @@ export function InterviewDetailModal({
     nextSteps: interview.nextSteps || '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const { getProcessForInterview, selectProcess } = useRecruitmentStore()
+  const linkedProcess = getProcessForInterview(interview.id)
 
   const statusConfig = interviewStatusConfig[interview.status]
   const scheduledAt = new Date(interview.scheduledAt)
@@ -371,6 +376,20 @@ export function InterviewDetailModal({
 
             {/* Actions */}
             <div className="flex flex-wrap gap-2 pt-4 border-t border-[#e8e4df]">
+              {linkedProcess && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    selectProcess(linkedProcess.id)
+                    onClose()
+                  }}
+                >
+                  <GitBranch className="w-4 h-4 mr-1" />
+                  View Process
+                </Button>
+              )}
+
               <Button variant="outline" size="sm" onClick={() => downloadICS(interview)}>
                 <Download className="w-4 h-4 mr-1" />
                 Export to Calendar

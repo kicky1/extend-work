@@ -13,7 +13,7 @@ interface StepTypeProps {
   onChange: (field: keyof InterviewFormData, value: InterviewFormData[keyof InterviewFormData]) => void
 }
 
-const interviewTypes: InterviewType[] = ['phone', 'video', 'onsite', 'technical', 'behavioral', 'panel']
+const interviewTypes: InterviewType[] = ['phone', 'video', 'onsite']
 
 export function StepType({ formData, onChange }: StepTypeProps) {
   // Auto-generate title when type or company changes

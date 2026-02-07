@@ -15,8 +15,8 @@ interface StepDetailsProps {
 }
 
 // Types that typically need meeting links vs physical locations
-const virtualTypes: InterviewType[] = ['phone', 'video', 'technical']
-const onsiteTypes: InterviewType[] = ['onsite', 'panel']
+const virtualTypes: InterviewType[] = ['phone', 'video']
+const onsiteTypes: InterviewType[] = ['onsite']
 
 export function StepDetails({ formData, onChange }: StepDetailsProps) {
   const [showInterviewer, setShowInterviewer] = useState(false)

@@ -46,7 +46,7 @@ export function CalendarView({
   const interviewsByDate = useMemo(() => {
     const map = new Map<string, Interview[]>()
     interviews.forEach((interview) => {
-      const dateStr = new Date(interview.scheduledAt).toISOString().split('T')[0]
+      const dateStr = format(new Date(interview.scheduledAt), 'yyyy-MM-dd')
       const existing = map.get(dateStr) || []
       map.set(dateStr, [...existing, interview])
     })
@@ -125,7 +125,7 @@ export function CalendarView({
         {weeks.map((week, weekIndex) => (
           <div key={weekIndex} className="grid grid-cols-7 divide-x divide-[#e8e4df]">
             {week.map((d, dayIndex) => {
-              const dateStr = d.toISOString().split('T')[0]
+              const dateStr = format(d, 'yyyy-MM-dd')
               const dayInterviews = interviewsByDate.get(dateStr) || []
               const isCurrentMonth = isSameMonth(d, currentMonth)
               const isSelected = selectedDate && isSameDay(d, selectedDate)
@@ -158,6 +158,7 @@ export function CalendarView({
                   <div className="space-y-0.5 sm:space-y-1">
                     {dayInterviews.slice(0, 3).map((interview) => {
                       const typeConfig = interviewTypeConfig[interview.interviewType]
+                      const isPast = new Date(interview.scheduledAt) < new Date()
                       return (
                         <button
                           key={interview.id}
@@ -169,7 +170,9 @@ export function CalendarView({
                             'w-full text-left px-1 sm:px-1.5 py-0.5 rounded text-[10px] sm:text-xs truncate transition-colors min-h-[24px] sm:min-h-0',
                             typeConfig.bgColor,
                             typeConfig.color,
-                            'hover:opacity-80'
+                            'hover:opacity-80',
+                            (interview.status === 'cancelled' || isPast) && 'opacity-50',
+                            interview.status === 'cancelled' && 'line-through'
                           )}
                         >
                           <InterviewTypeIcon type={interview.interviewType} className="w-3 h-3 mr-0.5 sm:mr-1 inline-block" colored={false} />

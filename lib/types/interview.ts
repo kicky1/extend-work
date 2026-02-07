@@ -3,7 +3,7 @@
 // =============================================
 
 // Interview type enumeration
-export type InterviewType = 'phone' | 'video' | 'onsite' | 'technical' | 'behavioral' | 'panel'
+export type InterviewType = 'phone' | 'video' | 'onsite'
 
 // Interview status
 export type InterviewStatus = 'scheduled' | 'completed' | 'cancelled' | 'rescheduled' | 'no_show'
@@ -16,6 +16,7 @@ export interface Interview {
   id: string
   userId: string
   jobApplicationId?: string
+  recruitmentProcessId?: string
 
   // Core data
   title: string
@@ -48,6 +49,9 @@ export interface Interview {
   feedback?: string
   nextSteps?: string
 
+  // Google Calendar
+  googleCalendarEventId?: string
+
   // Reminder tracking
   reminderSent24h: boolean
   reminderSent1h: boolean
@@ -62,6 +66,7 @@ export interface InterviewRow {
   id: string
   user_id: string
   job_application_id: string | null
+  recruitment_process_id: string | null
   title: string
   company: string
   position: string
@@ -81,6 +86,7 @@ export interface InterviewRow {
   outcome: InterviewOutcome | null
   feedback: string | null
   next_steps: string | null
+  google_calendar_event_id: string | null
   reminder_sent_24h: boolean
   reminder_sent_1h: boolean
   created_at: string
@@ -93,6 +99,7 @@ export function interviewFromRow(row: InterviewRow): Interview {
     id: row.id,
     userId: row.user_id,
     jobApplicationId: row.job_application_id ?? undefined,
+    recruitmentProcessId: row.recruitment_process_id ?? undefined,
     title: row.title,
     company: row.company,
     position: row.position,
@@ -112,6 +119,7 @@ export function interviewFromRow(row: InterviewRow): Interview {
     outcome: row.outcome ?? undefined,
     feedback: row.feedback ?? undefined,
     nextSteps: row.next_steps ?? undefined,
+    googleCalendarEventId: row.google_calendar_event_id ?? undefined,
     reminderSent24h: row.reminder_sent_24h,
     reminderSent1h: row.reminder_sent_1h,
     createdAt: row.created_at,
@@ -125,6 +133,7 @@ export function interviewToRow(interview: Partial<Interview>): Partial<Interview
 
   if (interview.userId !== undefined) row.user_id = interview.userId
   if (interview.jobApplicationId !== undefined) row.job_application_id = interview.jobApplicationId ?? null
+  if (interview.recruitmentProcessId !== undefined) row.recruitment_process_id = interview.recruitmentProcessId ?? null
   if (interview.title !== undefined) row.title = interview.title
   if (interview.company !== undefined) row.company = interview.company
   if (interview.position !== undefined) row.position = interview.position
@@ -166,6 +175,7 @@ export interface InterviewFormData {
   prepNotes?: string
   questions?: string[]
   jobApplicationId?: string
+  recruitmentProcessId?: string
 }
 
 // Default form values
@@ -193,9 +203,6 @@ export const interviewTypeConfig: Record<InterviewType, { label: string; color: 
   phone: { label: 'Phone', color: 'text-blue-600', bgColor: 'bg-blue-600/10', borderColor: 'border-blue-600', icon: 'phone' },
   video: { label: 'Video', color: 'text-purple-600', bgColor: 'bg-purple-600/10', borderColor: 'border-purple-600', icon: 'video' },
   onsite: { label: 'Onsite', color: 'text-green-600', bgColor: 'bg-green-600/10', borderColor: 'border-green-600', icon: 'building-2' },
-  technical: { label: 'Technical', color: 'text-orange-600', bgColor: 'bg-orange-600/10', borderColor: 'border-orange-600', icon: 'code' },
-  behavioral: { label: 'Behavioral', color: 'text-pink-600', bgColor: 'bg-pink-600/10', borderColor: 'border-pink-600', icon: 'message-circle' },
-  panel: { label: 'Panel', color: 'text-indigo-600', bgColor: 'bg-indigo-600/10', borderColor: 'border-indigo-600', icon: 'users' },
 }
 
 // Interview status configuration

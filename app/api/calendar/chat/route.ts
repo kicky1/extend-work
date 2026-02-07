@@ -8,12 +8,22 @@ import {
   updateInterviewSchema,
   rescheduleInterviewSchema,
   cancelInterviewSchema,
+  deleteInterviewSchema,
   listInterviewsSchema,
   getInterviewDetailsSchema,
+  updateOutcomeSchema,
+  listProcessesSchema,
+  addStageSchema,
+  skipStageSchema,
+  completeStageSchema,
+  updateProcessStatusSchema,
 } from '@/lib/interview-tools'
 import { createClient } from '@/lib/supabase/server'
 import { checkCanUseAI, recordAIUsage, truncateToTokenLimit } from '@/lib/ai/usage-guard'
-import type { Interview } from '@/lib/types/interview'
+import type { Interview, InterviewRow } from '@/lib/types/interview'
+import { interviewFromRow } from '@/lib/types/interview'
+import type { RecruitmentProcess, RecruitmentProcessRow } from '@/lib/types/recruitment'
+import { processFromRow } from '@/lib/types/recruitment'
 
 const anthropic = createAnthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -58,7 +68,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { messages, interviews } = await req.json() as { messages: UIMessage[]; interviews: Interview[] }
+    const { messages } = await req.json() as {
+      messages: UIMessage[]
+    }
 
     if (!messages || messages.length === 0) {
       return new Response(
@@ -67,12 +79,30 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Build context about current interviews
-    const interviewContext = buildInterviewContext(interviews)
+    // Fetch interviews and processes from DB (don't rely on stale client data)
+    const [interviewsResult, processesResult] = await Promise.all([
+      supabase
+        .from('interviews')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('scheduled_at', { ascending: true }),
+      supabase
+        .from('recruitment_processes')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false }),
+    ])
+
+    const interviews: Interview[] = (interviewsResult.data || []).map((row: InterviewRow) => interviewFromRow(row))
+    const processes: RecruitmentProcess[] = (processesResult.data || []).map((row: RecruitmentProcessRow) => processFromRow(row))
+
+    // Build context about current interviews and processes
+    const userTimezone = req.headers.get('x-timezone') || 'UTC'
+    const interviewContext = buildInterviewContext(interviews, processes, userTimezone)
     const truncatedContext = truncateToTokenLimit(interviewContext, usageCheck.tier)
 
     // Create tools with execute functions
-    const tools = createInterviewTools(interviews)
+    const tools = createInterviewTools(interviews, processes)
 
     const result = streamText({
       model: anthropic(process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929'),
@@ -112,7 +142,7 @@ ${truncatedContext}`,
 }
 
 // Create tools with execute functions
-function createInterviewTools(interviews: Interview[]) {
+function createInterviewTools(interviews: Interview[], processes: RecruitmentProcess[]) {
   return {
     [INTERVIEW_TOOLS.CREATE_INTERVIEW]: tool({
       description: "Schedule a new job interview. Requires company name, position, and scheduled datetime.",
@@ -142,19 +172,10 @@ function createInterviewTools(interviews: Interview[]) {
       execute: async (input): Promise<ToolResult> => {
         const interview = interviews.find(i => i.id === input.id)
         if (!interview) {
-          return {
-            action: 'updateInterview',
-            success: false,
-            error: `Interview with ID "${input.id}" not found`,
-          }
+          return { action: 'updateInterview', success: false, error: `Interview with ID "${input.id}" not found` }
         }
-
         const { id, ...updates } = input
-        return {
-          action: 'updateInterview',
-          success: true,
-          data: { id, ...updates },
-        }
+        return { action: 'updateInterview', success: true, data: { id, ...updates } }
       },
     }),
 
@@ -164,42 +185,33 @@ function createInterviewTools(interviews: Interview[]) {
       execute: async (input): Promise<ToolResult> => {
         const interview = interviews.find(i => i.id === input.id)
         if (!interview) {
-          return {
-            action: 'rescheduleInterview',
-            success: false,
-            error: `Interview with ID "${input.id}" not found`,
-          }
+          return { action: 'rescheduleInterview', success: false, error: `Interview with ID "${input.id}" not found` }
         }
-
-        return {
-          action: 'rescheduleInterview',
-          success: true,
-          data: {
-            id: input.id,
-            newScheduledAt: input.newScheduledAt,
-          },
-        }
+        return { action: 'rescheduleInterview', success: true, data: { id: input.id, newScheduledAt: input.newScheduledAt } }
       },
     }),
 
     [INTERVIEW_TOOLS.CANCEL_INTERVIEW]: tool({
-      description: "Cancel a scheduled interview.",
+      description: "Cancel a scheduled interview (marks as cancelled, keeps record).",
       inputSchema: cancelInterviewSchema,
       execute: async (input): Promise<ToolResult> => {
         const interview = interviews.find(i => i.id === input.id)
         if (!interview) {
-          return {
-            action: 'cancelInterview',
-            success: false,
-            error: `Interview with ID "${input.id}" not found`,
-          }
+          return { action: 'cancelInterview', success: false, error: `Interview with ID "${input.id}" not found` }
         }
+        return { action: 'cancelInterview', success: true, data: { id: input.id } }
+      },
+    }),
 
-        return {
-          action: 'cancelInterview',
-          success: true,
-          data: { id: input.id },
+    [INTERVIEW_TOOLS.DELETE_INTERVIEW]: tool({
+      description: "Permanently delete an interview. Use cancel_interview to just cancel it instead.",
+      inputSchema: deleteInterviewSchema,
+      execute: async (input): Promise<ToolResult> => {
+        const interview = interviews.find(i => i.id === input.id)
+        if (!interview) {
+          return { action: 'deleteInterview', success: false, error: `Interview with ID "${input.id}" not found` }
         }
+        return { action: 'deleteInterview', success: true, data: { id: input.id } }
       },
     }),
 
@@ -216,14 +228,10 @@ function createInterviewTools(interviews: Interview[]) {
 
         switch (input.filter) {
           case 'upcoming':
-            filtered = interviews.filter(i =>
-              new Date(i.scheduledAt) >= now && i.status === 'scheduled'
-            )
+            filtered = interviews.filter(i => new Date(i.scheduledAt) >= now && i.status === 'scheduled')
             break
           case 'past':
-            filtered = interviews.filter(i =>
-              new Date(i.scheduledAt) < now || i.status === 'completed'
-            )
+            filtered = interviews.filter(i => new Date(i.scheduledAt) < now || i.status === 'completed')
             break
           case 'today':
             filtered = interviews.filter(i => {
@@ -239,14 +247,10 @@ function createInterviewTools(interviews: Interview[]) {
             break
           case 'all':
           default:
-            // Return all
             break
         }
 
-        // Sort by date
-        filtered.sort((a, b) =>
-          new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
-        )
+        filtered.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
 
         return {
           action: 'listInterviews',
@@ -274,13 +278,8 @@ function createInterviewTools(interviews: Interview[]) {
       execute: async (input): Promise<ToolResult> => {
         const interview = interviews.find(i => i.id === input.id)
         if (!interview) {
-          return {
-            action: 'getInterviewDetails',
-            success: false,
-            error: `Interview with ID "${input.id}" not found`,
-          }
+          return { action: 'getInterviewDetails', success: false, error: `Interview with ID "${input.id}" not found` }
         }
-
         return {
           action: 'getInterviewDetails',
           success: true,
@@ -304,19 +303,137 @@ function createInterviewTools(interviews: Interview[]) {
         }
       },
     }),
+
+    [INTERVIEW_TOOLS.UPDATE_OUTCOME]: tool({
+      description: "Record the outcome of an interview (positive, neutral, negative) with optional feedback and next steps.",
+      inputSchema: updateOutcomeSchema,
+      execute: async (input): Promise<ToolResult> => {
+        const interview = interviews.find(i => i.id === input.id)
+        if (!interview) {
+          return { action: 'updateOutcome', success: false, error: `Interview with ID "${input.id}" not found` }
+        }
+        return {
+          action: 'updateOutcome',
+          success: true,
+          data: { id: input.id, outcome: input.outcome, feedback: input.feedback, nextSteps: input.nextSteps },
+        }
+      },
+    }),
+
+    [INTERVIEW_TOOLS.LIST_PROCESSES]: tool({
+      description: "List the user's recruitment processes/pipelines.",
+      inputSchema: listProcessesSchema,
+      execute: async (input): Promise<ToolResult> => {
+        let filtered = processes
+        if (input.filter === 'active') {
+          filtered = processes.filter(p => p.status === 'active')
+        }
+        return {
+          action: 'listProcesses',
+          success: true,
+          data: {
+            filter: input.filter || 'active',
+            processes: filtered.map(p => ({
+              id: p.id,
+              company: p.company,
+              position: p.position,
+              status: p.status,
+              stages: p.stages.map(s => ({
+                id: s.id,
+                type: s.type,
+                label: s.label,
+                status: s.status,
+              })),
+            })),
+          },
+        }
+      },
+    }),
+
+    [INTERVIEW_TOOLS.ADD_STAGE]: tool({
+      description: "Add a new stage to a recruitment process (phone_screen, video_interview, or onsite_final).",
+      inputSchema: addStageSchema,
+      execute: async (input): Promise<ToolResult> => {
+        const process = processes.find(p => p.id === input.processId)
+        if (!process) {
+          return { action: 'addStage', success: false, error: `Process with ID "${input.processId}" not found` }
+        }
+        return {
+          action: 'addStage',
+          success: true,
+          data: { processId: input.processId, stageType: input.stageType },
+        }
+      },
+    }),
+
+    [INTERVIEW_TOOLS.SKIP_STAGE]: tool({
+      description: "Skip a stage in a recruitment process.",
+      inputSchema: skipStageSchema,
+      execute: async (input): Promise<ToolResult> => {
+        const process = processes.find(p => p.id === input.processId)
+        if (!process) {
+          return { action: 'skipStage', success: false, error: `Process with ID "${input.processId}" not found` }
+        }
+        const stage = process.stages.find(s => s.id === input.stageId)
+        if (!stage) {
+          return { action: 'skipStage', success: false, error: `Stage with ID "${input.stageId}" not found` }
+        }
+        return {
+          action: 'skipStage',
+          success: true,
+          data: { processId: input.processId, stageId: input.stageId },
+        }
+      },
+    }),
+
+    [INTERVIEW_TOOLS.COMPLETE_STAGE]: tool({
+      description: "Mark a stage as completed in a recruitment process.",
+      inputSchema: completeStageSchema,
+      execute: async (input): Promise<ToolResult> => {
+        const process = processes.find(p => p.id === input.processId)
+        if (!process) {
+          return { action: 'completeStage', success: false, error: `Process with ID "${input.processId}" not found` }
+        }
+        const stage = process.stages.find(s => s.id === input.stageId)
+        if (!stage) {
+          return { action: 'completeStage', success: false, error: `Stage with ID "${input.stageId}" not found` }
+        }
+        return {
+          action: 'completeStage',
+          success: true,
+          data: { processId: input.processId, stageId: input.stageId },
+        }
+      },
+    }),
+
+    [INTERVIEW_TOOLS.UPDATE_PROCESS_STATUS]: tool({
+      description: "Update the status of a recruitment process (accepted, rejected, withdrawn).",
+      inputSchema: updateProcessStatusSchema,
+      execute: async (input): Promise<ToolResult> => {
+        const process = processes.find(p => p.id === input.processId)
+        if (!process) {
+          return { action: 'updateProcessStatus', success: false, error: `Process with ID "${input.processId}" not found` }
+        }
+        return {
+          action: 'updateProcessStatus',
+          success: true,
+          data: { processId: input.processId, status: input.status },
+        }
+      },
+    }),
   }
 }
 
-function buildInterviewContext(interviews: Interview[]): string {
+function buildInterviewContext(interviews: Interview[], processes: RecruitmentProcess[], userTimezone: string): string {
   const parts: string[] = []
   const now = new Date()
-  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
 
   // Current time context
   parts.push('## Current Context')
-  parts.push(`- Today's Date: ${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`)
-  parts.push(`- Current Time: ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`)
+  parts.push(`- Today's Date: ${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: userTimezone })}`)
+  parts.push(`- Current Time: ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: userTimezone })}`)
   parts.push(`- User Timezone: ${userTimezone}`)
+  parts.push(`- IMPORTANT: When the user says a time like "5 PM", they mean ${userTimezone} time. Always generate scheduledAt ISO strings with a Z suffix in UTC (e.g. if user says "5 PM" and is in Europe/Warsaw which is UTC+1, output "2024-02-07T16:00:00Z").`)
 
   // Filter to upcoming 30 days to avoid token bloat
   const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
@@ -363,6 +480,23 @@ function buildInterviewContext(interviews: Interview[]): string {
     recentPast.forEach((interview) => {
       const date = new Date(interview.scheduledAt)
       parts.push(`- ${interview.company} (${interview.position}) - ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${interview.status} (ID: ${interview.id})`)
+    })
+  }
+
+  // Recruitment processes
+  const activeProcesses = processes.filter(p => p.status === 'active')
+  if (activeProcesses.length > 0) {
+    parts.push('\n## Active Recruitment Pipelines')
+    activeProcesses.slice(0, 10).forEach((process) => {
+      const stagesSummary = process.stages
+        .map(s => `${s.label} (${s.status})`)
+        .join(' → ')
+      parts.push(`\n### ${process.company} — ${process.position} (ID: ${process.id})`)
+      parts.push(`- Status: ${process.status}`)
+      parts.push(`- Stages: ${stagesSummary}`)
+      process.stages.forEach(s => {
+        if (s.id) parts.push(`  - Stage "${s.label}" ID: ${s.id}`)
+      })
     })
   }
 

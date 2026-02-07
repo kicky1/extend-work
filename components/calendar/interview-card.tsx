@@ -16,6 +16,7 @@ export function InterviewCard({ interview, onClick, compact = false }: Interview
   const typeConfig = interviewTypeConfig[interview.interviewType]
   const statusConfig = interviewStatusConfig[interview.status]
   const time = format(new Date(interview.scheduledAt), 'h:mm a')
+  const isPast = new Date(interview.scheduledAt) < new Date()
 
   if (compact) {
     return (
@@ -25,7 +26,8 @@ export function InterviewCard({ interview, onClick, compact = false }: Interview
           'w-full text-left px-2 py-1 rounded text-xs truncate transition-colors',
           typeConfig.bgColor,
           typeConfig.color,
-          'hover:opacity-80'
+          'hover:opacity-80',
+          isPast && 'opacity-50'
         )}
       >
         <InterviewTypeIcon type={interview.interviewType} className="w-3 h-3 mr-1 inline-block" colored={false} />
@@ -40,7 +42,8 @@ export function InterviewCard({ interview, onClick, compact = false }: Interview
       onClick={onClick}
       className={cn(
         'w-full text-left p-3 rounded-lg border border-transparent transition-all',
-        'hover:border-[#e8e4df] hover:bg-[#f8f6f4]'
+        'hover:border-[#e8e4df] hover:bg-[#f8f6f4]',
+        isPast && 'opacity-50'
       )}
     >
       <div className="flex items-start justify-between gap-2">

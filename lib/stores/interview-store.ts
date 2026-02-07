@@ -1,6 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
+import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import type {
   Interview,
@@ -9,7 +10,18 @@ import type {
   InterviewStatus,
   InterviewOutcome,
 } from '@/lib/types/interview'
-import { interviewFromRow, interviewToRow } from '@/lib/types/interview'
+import { interviewFromRow, interviewToRow, interviewTypeConfig } from '@/lib/types/interview'
+import useRecruitmentStore from '@/lib/stores/recruitment-store'
+import { mapInterviewTypeToStageType } from '@/lib/types/recruitment'
+
+/** Fire-and-forget Google Calendar sync */
+function syncToGoogleCalendar(action: 'create' | 'update' | 'delete', interviewId: string) {
+  fetch('/api/calendar/sync', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, interviewId }),
+  }).catch((err) => console.error('GCal sync error:', err))
+}
 
 interface InterviewStore {
   // State
@@ -59,7 +71,11 @@ const useInterviewStore = create<InterviewStore>((set, get) => ({
   // Load all interviews for the user
   loadInterviews: async () => {
     const supabase = createClient()
-    set({ isLoading: true, error: null })
+    const isInitialLoad = get().interviews.length === 0
+    // Only show loading spinner on initial load to avoid UI flicker on refreshes
+    if (isInitialLoad) {
+      set({ isLoading: true, error: null })
+    }
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -99,7 +115,7 @@ const useInterviewStore = create<InterviewStore>((set, get) => ({
         position: data.position,
         interview_type: data.interviewType,
         status: 'scheduled' as InterviewStatus,
-        scheduled_at: data.scheduledAt,
+        scheduled_at: new Date(data.scheduledAt).toISOString(),
         duration: data.duration,
         timezone: data.timezone,
         location: data.location || null,
@@ -128,6 +144,34 @@ const useInterviewStore = create<InterviewStore>((set, get) => ({
         ),
       }))
 
+      // Sync to Google Calendar
+      syncToGoogleCalendar('create', interview.id)
+
+      // Auto-link to recruitment process
+      try {
+        const recruitmentStore = useRecruitmentStore.getState()
+        const stageType = mapInterviewTypeToStageType(data.interviewType)
+        let process = recruitmentStore.findProcessByCompanyPosition(data.company, data.position)
+
+        if (!process) {
+          process = await recruitmentStore.createProcess(data.company, data.position) ?? undefined
+        }
+
+        if (process) {
+          const label = `${interviewTypeConfig[data.interviewType].label} Interview`
+          await recruitmentStore.linkInterviewToProcess(
+            interview.id,
+            process.id,
+            stageType,
+            data.scheduledAt,
+            label
+          )
+        }
+      } catch (err) {
+        // Non-blocking: don't fail interview creation if recruitment linking fails
+        console.error('Error linking interview to recruitment process:', err)
+      }
+
       return interview
     } catch (error: any) {
       console.error('Error creating interview:', error)
@@ -146,7 +190,7 @@ const useInterviewStore = create<InterviewStore>((set, get) => ({
       if (data.company !== undefined) updateData.company = data.company
       if (data.position !== undefined) updateData.position = data.position
       if (data.interviewType !== undefined) updateData.interview_type = data.interviewType
-      if (data.scheduledAt !== undefined) updateData.scheduled_at = data.scheduledAt
+      if (data.scheduledAt !== undefined) updateData.scheduled_at = new Date(data.scheduledAt).toISOString()
       if (data.duration !== undefined) updateData.duration = data.duration
       if (data.timezone !== undefined) updateData.timezone = data.timezone
       if (data.location !== undefined) updateData.location = data.location || null
@@ -175,6 +219,27 @@ const useInterviewStore = create<InterviewStore>((set, get) => ({
           .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()),
         selectedInterview: state.selectedInterview?.id === id ? interview : state.selectedInterview,
       }))
+
+      // Sync to Google Calendar
+      syncToGoogleCalendar('update', id)
+
+      // Sync scheduledAt to linked recruitment stage
+      if (data.scheduledAt) {
+        try {
+          const recruitmentStore = useRecruitmentStore.getState()
+          const process = recruitmentStore.getProcessForInterview(id)
+          if (process) {
+            const stage = process.stages.find(s => s.interviewId === id)
+            if (stage) {
+              await recruitmentStore.updateStage(process.id, stage.id, {
+                scheduledAt: interview.scheduledAt
+              })
+            }
+          }
+        } catch (err) {
+          console.error('Error syncing schedule to recruitment stage:', err)
+        }
+      }
     } catch (error: any) {
       console.error('Error updating interview:', error)
       throw error
@@ -200,6 +265,15 @@ const useInterviewStore = create<InterviewStore>((set, get) => ({
         interviews: state.interviews.map((i) => (i.id === id ? interview : i)),
         selectedInterview: state.selectedInterview?.id === id ? interview : state.selectedInterview,
       }))
+
+      // Remove linked stage from recruitment process when cancelled
+      if (status === 'cancelled') {
+        try {
+          useRecruitmentStore.getState().removeStageForInterview(id)
+        } catch (err) {
+          console.error('Error removing stage for cancelled interview:', err)
+        }
+      }
     } catch (error: any) {
       console.error('Error updating interview status:', error)
       throw error
@@ -232,6 +306,25 @@ const useInterviewStore = create<InterviewStore>((set, get) => ({
         interviews: state.interviews.map((i) => (i.id === id ? interview : i)),
         selectedInterview: state.selectedInterview?.id === id ? interview : state.selectedInterview,
       }))
+
+      // Sync outcome to linked recruitment stage
+      try {
+        const recruitmentStore = useRecruitmentStore.getState()
+        const process = recruitmentStore.getProcessForInterview(id)
+        if (process) {
+          const stage = process.stages.find(s => s.interviewId === id)
+          if (stage) {
+            await recruitmentStore.updateStage(process.id, stage.id, {
+              status: 'completed',
+              completedAt: new Date().toISOString(),
+              outcome,
+              ...(feedback ? { notes: feedback } : {}),
+            })
+          }
+        }
+      } catch (err) {
+        console.error('Error syncing outcome to recruitment stage:', err)
+      }
     } catch (error: any) {
       console.error('Error updating interview outcome:', error)
       throw error
@@ -243,6 +336,9 @@ const useInterviewStore = create<InterviewStore>((set, get) => ({
     const supabase = createClient()
 
     try {
+      // Sync delete to Google Calendar before removing from DB
+      syncToGoogleCalendar('delete', id)
+
       const { error } = await supabase
         .from('interviews')
         .delete()
@@ -254,6 +350,13 @@ const useInterviewStore = create<InterviewStore>((set, get) => ({
         interviews: state.interviews.filter((i) => i.id !== id),
         selectedInterview: state.selectedInterview?.id === id ? null : state.selectedInterview,
       }))
+
+      // Remove linked stage from recruitment process
+      try {
+        useRecruitmentStore.getState().removeStageForInterview(id)
+      } catch (err) {
+        console.error('Error removing stage for deleted interview:', err)
+      }
     } catch (error: any) {
       console.error('Error deleting interview:', error)
       throw error
@@ -269,10 +372,10 @@ const useInterviewStore = create<InterviewStore>((set, get) => ({
   // Get interviews for a specific date
   getInterviewsForDate: (date) => {
     const { interviews, statusFilter } = get()
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = format(date, 'yyyy-MM-dd')
 
     return interviews.filter((interview) => {
-      const interviewDate = new Date(interview.scheduledAt).toISOString().split('T')[0]
+      const interviewDate = format(new Date(interview.scheduledAt), 'yyyy-MM-dd')
       const matchesDate = interviewDate === dateStr
       const matchesStatus = statusFilter === 'all' || interview.status === statusFilter
       return matchesDate && matchesStatus

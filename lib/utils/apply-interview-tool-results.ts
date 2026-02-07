@@ -1,6 +1,8 @@
 import useInterviewStore from '@/lib/stores/interview-store'
-import type { Interview, InterviewFormData } from '@/lib/types/interview'
+import useRecruitmentStore from '@/lib/stores/recruitment-store'
+import type { InterviewFormData, InterviewOutcome } from '@/lib/types/interview'
 import type { InterviewToolResult } from '@/lib/interview-tools'
+import type { RecruitmentStageType } from '@/lib/types/recruitment'
 
 // Re-export for backwards compatibility
 export type { InterviewToolResult }
@@ -10,7 +12,6 @@ export interface ApplyInterviewResult {
   success: boolean
   description: string | null
   error?: string
-  previousValue?: unknown // For undo support
   interviewId?: string // For tracking created/modified interview
 }
 
@@ -26,11 +27,24 @@ function validateToolResult(action: string, data: Record<string, unknown>): stri
     case 'updateInterview':
     case 'rescheduleInterview':
     case 'cancelInterview':
+    case 'deleteInterview':
+    case 'updateOutcome':
     case 'getInterviewDetails': {
       const id = data.id as string
       if (!id) return 'Missing interview ID'
       const exists = interviews.some(i => i.id === id)
       if (!exists) return `Interview with ID "${id}" not found`
+      break
+    }
+    case 'addStage':
+    case 'skipStage':
+    case 'completeStage':
+    case 'updateProcessStatus': {
+      const processId = data.processId as string
+      if (!processId) return 'Missing process ID'
+      const recruitmentStore = useRecruitmentStore.getState()
+      const exists = recruitmentStore.processes.some(p => p.id === processId)
+      if (!exists) return `Process with ID "${processId}" not found`
       break
     }
   }
@@ -39,26 +53,8 @@ function validateToolResult(action: string, data: Record<string, unknown>): stri
 }
 
 /**
- * Get current value for undo support
- */
-function getPreviousValue(action: string, data: Record<string, unknown>): unknown {
-  const { interviews } = useInterviewStore.getState()
-
-  switch (action) {
-    case 'updateInterview':
-    case 'rescheduleInterview':
-    case 'cancelInterview': {
-      const id = data.id as string
-      return interviews.find(i => i.id === id)
-    }
-    default:
-      return undefined
-  }
-}
-
-/**
  * Apply a single tool result to the interview store
- * Returns detailed result with success status, description, and previous value for undo
+ * Returns detailed result with success status and description
  */
 export async function applyInterviewToolResult(result: InterviewToolResult): Promise<ApplyInterviewResult> {
   if (!result.success) {
@@ -78,9 +74,6 @@ export async function applyInterviewToolResult(result: InterviewToolResult): Pro
   if (validationError) {
     return { success: false, description: null, error: validationError }
   }
-
-  // Get previous value for undo support
-  const previousValue = getPreviousValue(action, data)
 
   try {
     switch (action) {
@@ -131,7 +124,6 @@ export async function applyInterviewToolResult(result: InterviewToolResult): Pro
         return {
           success: true,
           description: `Updated interview: ${fields.join(', ')}`,
-          previousValue,
           interviewId: id,
         }
       }
@@ -148,7 +140,6 @@ export async function applyInterviewToolResult(result: InterviewToolResult): Pro
           description: interview
             ? `Rescheduled ${interview.company} interview to ${dateStr}`
             : `Rescheduled interview to ${dateStr}`,
-          previousValue,
           interviewId: id,
         }
       }
@@ -164,7 +155,6 @@ export async function applyInterviewToolResult(result: InterviewToolResult): Pro
           description: interview
             ? `Cancelled ${interview.company} interview`
             : 'Cancelled interview',
-          previousValue,
           interviewId: id,
         }
       }
@@ -185,6 +175,100 @@ export async function applyInterviewToolResult(result: InterviewToolResult): Pro
         return {
           success: true,
           description: null,
+        }
+      }
+
+      case 'deleteInterview': {
+        const { id } = data as { id: string }
+        const interview = store.interviews.find(i => i.id === id)
+
+        await store.deleteInterview(id)
+
+        return {
+          success: true,
+          description: interview
+            ? `Deleted ${interview.company} interview`
+            : 'Deleted interview',
+          interviewId: id,
+        }
+      }
+
+      case 'updateOutcome': {
+        const { id, outcome, feedback, nextSteps } = data as {
+          id: string
+          outcome: InterviewOutcome
+          feedback?: string
+          nextSteps?: string
+        }
+        const interview = store.interviews.find(i => i.id === id)
+
+        await store.updateInterviewOutcome(id, outcome, feedback, nextSteps)
+
+        return {
+          success: true,
+          description: interview
+            ? `Recorded ${outcome} outcome for ${interview.company}`
+            : `Recorded ${outcome} outcome`,
+          interviewId: id,
+        }
+      }
+
+      case 'listProcesses': {
+        const count = (data.processes as unknown[])?.length || 0
+        const filter = data.filter as string || 'active'
+        return {
+          success: true,
+          description: `Found ${count} ${filter} pipeline${count !== 1 ? 's' : ''}`,
+        }
+      }
+
+      case 'addStage': {
+        const { processId, stageType } = data as { processId: string; stageType: RecruitmentStageType }
+        const recruitmentStore = useRecruitmentStore.getState()
+        await recruitmentStore.addStage(processId, stageType)
+
+        return {
+          success: true,
+          description: `Added ${stageType.replace('_', ' ')} stage`,
+        }
+      }
+
+      case 'skipStage': {
+        const { processId, stageId } = data as { processId: string; stageId: string }
+        const recruitmentStore = useRecruitmentStore.getState()
+        await recruitmentStore.updateStage(processId, stageId, { status: 'skipped' })
+
+        return {
+          success: true,
+          description: 'Skipped stage',
+        }
+      }
+
+      case 'completeStage': {
+        const { processId, stageId } = data as { processId: string; stageId: string }
+        const recruitmentStore = useRecruitmentStore.getState()
+        await recruitmentStore.updateStage(processId, stageId, {
+          status: 'completed',
+          completedAt: new Date().toISOString(),
+        })
+
+        return {
+          success: true,
+          description: 'Marked stage as completed',
+        }
+      }
+
+      case 'updateProcessStatus': {
+        const { processId, status } = data as { processId: string; status: string }
+        const recruitmentStore = useRecruitmentStore.getState()
+        const process = recruitmentStore.processes.find(p => p.id === processId)
+        await recruitmentStore.updateProcess(processId, { status: status as any })
+
+        return {
+          success: true,
+          description: process
+            ? `Updated ${process.company} to ${status}`
+            : `Updated process to ${status}`,
         }
       }
 
@@ -211,57 +295,6 @@ export async function applyInterviewToolResults(results: InterviewToolResult[]):
 }
 
 /**
- * Undo a previously applied interview tool result
- */
-export async function undoInterviewToolResult(action: string, previousValue: unknown): Promise<boolean> {
-  const store = useInterviewStore.getState()
-
-  try {
-    switch (action) {
-      case 'createInterview': {
-        // previousValue should be the interview ID
-        if (previousValue) {
-          await store.deleteInterview(previousValue as string)
-        }
-        return true
-      }
-
-      case 'updateInterview':
-      case 'rescheduleInterview': {
-        const prev = previousValue as Interview
-        if (prev) {
-          await store.updateInterview(prev.id, {
-            company: prev.company,
-            position: prev.position,
-            scheduledAt: prev.scheduledAt,
-            duration: prev.duration,
-            interviewType: prev.interviewType,
-            location: prev.location,
-            notes: prev.notes,
-            interviewerName: prev.interviewerName,
-          })
-        }
-        return true
-      }
-
-      case 'cancelInterview': {
-        const prev = previousValue as Interview
-        if (prev) {
-          await store.updateInterviewStatus(prev.id, prev.status)
-        }
-        return true
-      }
-
-      default:
-        return false
-    }
-  } catch (err) {
-    console.error(`[undoInterviewToolResult] Error undoing ${action}:`, err)
-    return false
-  }
-}
-
-/**
  * Generate human-readable descriptions of what tool results will do
  */
 export function describeInterviewToolResults(results: InterviewToolResult[]): string[] {
@@ -277,10 +310,24 @@ export function describeInterviewToolResults(results: InterviewToolResult[]): st
           return 'Reschedule interview'
         case 'cancelInterview':
           return 'Cancel interview'
+        case 'deleteInterview':
+          return 'Delete interview'
         case 'listInterviews':
           return 'List interviews'
         case 'getInterviewDetails':
           return 'Get interview details'
+        case 'updateOutcome':
+          return 'Record interview outcome'
+        case 'listProcesses':
+          return 'List recruitment pipelines'
+        case 'addStage':
+          return 'Add pipeline stage'
+        case 'skipStage':
+          return 'Skip pipeline stage'
+        case 'completeStage':
+          return 'Complete pipeline stage'
+        case 'updateProcessStatus':
+          return 'Update process status'
         default:
           return `Execute ${action}`
       }

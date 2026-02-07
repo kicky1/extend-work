@@ -1,6 +1,6 @@
 'use client'
 
-import { Phone, Video, Building2, Code, MessageCircle, Users } from 'lucide-react'
+import { Phone, Video, Building2 } from 'lucide-react'
 import type { InterviewType } from '@/lib/types/interview'
 import { interviewTypeConfig } from '@/lib/types/interview'
 import { cn } from '@/lib/utils'
@@ -9,9 +9,6 @@ const iconComponents: Record<InterviewType, React.ComponentType<{ className?: st
   phone: Phone,
   video: Video,
   onsite: Building2,
-  technical: Code,
-  behavioral: MessageCircle,
-  panel: Users,
 }
 
 interface InterviewTypeIconProps {
