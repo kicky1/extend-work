@@ -288,6 +288,14 @@ function PercentageStyle({ skills, theme }: { skills: Skill[]; theme: CVTheme })
   )
 }
 
+function getSpacing(spacing?: string) {
+  switch (spacing) {
+    case 'compact': return 'mt-4'
+    case 'relaxed': return 'mt-8'
+    default: return 'mt-6'
+  }
+}
+
 export default function SkillsSection({ skills, theme, compact = false }: SkillsSectionProps) {
   const skillsStyle: SkillsStyle = theme.skillsStyle || 'list'
 
@@ -336,7 +344,7 @@ export default function SkillsSection({ skills, theme, compact = false }: Skills
 
   return (
     <HighlightWrapper sectionRef={{ type: 'skills' }}>
-      <section className="mt-6">
+      <section className={getSpacing(theme.spacing)}>
         <h2
           className="text-lg font-bold uppercase tracking-wide mb-2"
           style={{

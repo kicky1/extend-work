@@ -412,7 +412,7 @@ const useCVStore = create<CVStore>((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('cvs')
-        .select('*')
+        .select('id, data')
         .eq('id', id)
         .single()
 
@@ -446,7 +446,7 @@ const useCVStore = create<CVStore>((set, get) => ({
       // Try to get existing CV
       const { data: existingCV } = await supabase
         .from('cvs')
-        .select('*')
+        .select('id, data')
         .eq('user_id', user.id)
         .single()
 

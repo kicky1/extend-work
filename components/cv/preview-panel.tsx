@@ -8,8 +8,15 @@ import EvaluationPanel from './evaluation/evaluation-panel'
 import IssueIndicators from './evaluation/issue-indicators'
 import FixPreviewModal from './evaluation/fix-preview-modal'
 import { exportCVToPDF } from '@/lib/utils/export-pdf'
+import { exportCVToDocx } from '@/lib/utils/export-docx'
 import { Button } from '@/components/ui/button'
-import { Sparkles, Loader2 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
+import { Sparkles, Loader2, Download, ChevronDown } from 'lucide-react'
 import type { CVIssue } from '@/lib/types/cv-evaluation'
 
 function CVDocumentSkeleton() {
@@ -77,6 +84,7 @@ export default function PreviewPanel() {
   const { cvData, isInitialized } = useCVStore()
   const { isEvaluating, evaluation, evaluate, openPanel, markIssueFixed } = useEvaluationStore()
   const [isExporting, setIsExporting] = useState(false)
+  const [isExportingDocx, setIsExportingDocx] = useState(false)
   const [fixingIssue, setFixingIssue] = useState<CVIssue | null>(null)
   const previewContainerRef = useRef<HTMLDivElement>(null)
 
@@ -97,6 +105,18 @@ export default function PreviewPanel() {
       alert('Failed to export PDF. Please try again.')
     } finally {
       setIsExporting(false)
+    }
+  }
+
+  const handleExportDocx = async () => {
+    setIsExportingDocx(true)
+    try {
+      await exportCVToDocx(cvData)
+    } catch (error) {
+      console.error('Failed to export DOCX:', error)
+      alert('Failed to export DOCX. Please try again.')
+    } finally {
+      setIsExportingDocx(false)
     }
   }
 
@@ -135,13 +155,29 @@ export default function PreviewPanel() {
               </>
             )}
           </Button>
-          <Button
-            onClick={handleExportPDF}
-            disabled={isExporting || !isInitialized}
-            size="sm"
-          >
-            {isExporting ? 'Exporting...' : 'Export PDF'}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger>
+              <Button
+                disabled={(isExporting || isExportingDocx) || !isInitialized}
+                size="sm"
+                asChild
+              >
+                <span>
+                  <Download className="w-4 h-4 mr-1.5" />
+                  {isExporting ? 'Exporting PDF...' : isExportingDocx ? 'Exporting DOCX...' : 'Export'}
+                  <ChevronDown className="w-3 h-3 ml-1" />
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportPDF} disabled={isExporting}>
+                Export as PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportDocx} disabled={isExportingDocx}>
+                Export as DOCX
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

@@ -859,10 +859,15 @@ function LayoutTab({ theme, updateTheme }: TabProps) {
       {/* Layout Style */}
       <SectionAccordion title="Page Layout" icon={LayoutGrid} defaultOpen={true}>
         <div className="grid grid-cols-2 gap-2">
-          {layoutOptions.slice(0, 6).map(({ value, label }) => (
+          {layoutOptions.map(({ value, label }) => (
             <button
               key={value}
-              onClick={() => updateTheme({ layout: value })}
+              onClick={() => {
+                updateTheme({ layout: value })
+                if (value !== 'sidebar-left' && value !== 'sidebar-right') {
+                  updateSidebarStyle({ fullBleed: false })
+                }
+              }}
               className={`p-2.5 rounded-lg border transition-all text-center ${
                 theme.layout === value
                   ? 'border-primary bg-primary/5 text-primary'
@@ -959,33 +964,33 @@ function LayoutTab({ theme, updateTheme }: TabProps) {
               </div>
             </div>
 
-            {/* Full Height Toggle */}
+            {/* Full Bleed Toggle */}
             <button
-              onClick={() => updateSidebarStyle({ fullHeight: !sidebarStyle.fullHeight })}
+              onClick={() => updateSidebarStyle({ fullBleed: !sidebarStyle.fullBleed })}
               className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-all ${
-                sidebarStyle.fullHeight
+                sidebarStyle.fullBleed
                   ? 'border-primary bg-primary/5'
                   : 'border-border hover:border-primary/50'
               }`}
             >
               <div className="flex items-center gap-2">
-                {sidebarStyle.fullHeight ? (
+                {sidebarStyle.fullBleed ? (
                   <Eye className="w-4 h-4 text-primary" />
                 ) : (
                   <EyeOff className="w-4 h-4 text-muted-foreground" />
                 )}
-                <span className={`text-xs font-medium ${sidebarStyle.fullHeight ? 'text-primary' : 'text-muted-foreground'}`}>
-                  Full Height
+                <span className={`text-xs font-medium ${sidebarStyle.fullBleed ? 'text-primary' : 'text-muted-foreground'}`}>
+                  Full Bleed
                 </span>
               </div>
               <div
                 className={`w-9 h-5 rounded-full transition-colors relative ${
-                  sidebarStyle.fullHeight ? 'bg-primary' : 'bg-muted'
+                  sidebarStyle.fullBleed ? 'bg-primary' : 'bg-muted'
                 }`}
               >
                 <div
                   className={`absolute w-4 h-4 rounded-full bg-white shadow-sm transition-all top-0.5 ${
-                    sidebarStyle.fullHeight ? 'left-4' : 'left-0.5'
+                    sidebarStyle.fullBleed ? 'left-4' : 'left-0.5'
                   }`}
                 />
               </div>
@@ -1132,7 +1137,7 @@ function LayoutTab({ theme, updateTheme }: TabProps) {
 }
 
 // Layout compatibility: which styles are available for each layout
-const twoColumnLayouts = ['two-column', 'sidebar-left', 'sidebar-right']
+const twoColumnLayouts = ['sidebar-left', 'sidebar-right']
 
 function getAvailableHeaderStyles(layout: string) {
   if (twoColumnLayouts.includes(layout)) return twoColumnHeaderStyles
@@ -1143,7 +1148,7 @@ function getAvailableHeaderStyles(layout: string) {
 
 function getAvailableSummaryStyles(layout: string) {
   if (twoColumnLayouts.includes(layout)) return twoColumnSummaryStyles
-  return summaryStyles
+  return summaryStyles.filter(s => s.value !== 'sidebar')
 }
 
 function SectionsTab({ theme, updateTheme }: TabProps) {

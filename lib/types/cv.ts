@@ -60,20 +60,15 @@ export interface Footer {
   rodoConsent: string
 }
 
-// Layout types - expanded from 4 to 10+
+// Layout types
 export type CVLayout =
   | 'classic'
-  | 'modern'
-  | 'minimal'
-  | 'two-column'
   | 'sidebar-left'
   | 'sidebar-right'
   | 'top-banner'
   | 'compact'
   | 'timeline'
   | 'magazine'
-  | 'card-based'
-  | 'infographic'
 
 // Header styles - expanded from 3 to 8, plus two-column specific styles
 export type HeaderStyle =
@@ -151,7 +146,7 @@ export interface SidebarStyle {
   corners: 'none' | 'subtle' | 'rounded' | 'pill'
   background: 'solid' | 'light' | 'gradient' | 'none'
   border: 'none' | 'subtle' | 'accent'
-  fullHeight: boolean
+  fullBleed: boolean
   width: 25 | 30 | 35 | 40
 }
 
@@ -308,7 +303,7 @@ export const defaultSidebarStyle: SidebarStyle = {
   corners: 'subtle',
   background: 'light',
   border: 'none',
-  fullHeight: false,
+  fullBleed: false,
   width: 30,
 }
 

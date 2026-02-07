@@ -148,9 +148,7 @@ export default function WorkExperienceForm() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">
-          Work Experience
-        </h3>
+        <div></div>
         <Button
           onClick={addWorkExperience}
           size="sm"

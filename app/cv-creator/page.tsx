@@ -5,12 +5,15 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import useCVStore from '@/lib/stores/cv-store'
 import { useAutoSave } from '@/lib/hooks/use-auto-save'
+import dynamic from 'next/dynamic'
 import EditorPanel from '@/components/cv/editor-panel'
 import PreviewPanel from '@/components/cv/preview-panel'
-import { ThemeCustomizerButton, ThemeCustomizerPanel } from '@/components/cv/theme-customizer'
-import FloatingAIAssistant from '@/components/cv/floating-ai-assistant'
+import { ThemeCustomizerButton } from '@/components/cv/theme-customizer'
 import AppNavbar from '@/components/layout/app-navbar'
 import { useState } from 'react'
+
+const FloatingAIAssistant = dynamic(() => import('@/components/cv/floating-ai-assistant'), { ssr: false })
+const ThemeCustomizerPanel = dynamic(() => import('@/components/cv/theme-customizer').then(m => ({ default: m.ThemeCustomizerPanel })), { ssr: false })
 
 export default function CVCreatorPage() {
   const router = useRouter()

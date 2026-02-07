@@ -403,18 +403,19 @@ export default function CVPaginator({
       theme.colors.text
     )
 
-    // For fullHeight, we need to handle the container differently
     const isGradient = sidebarStyleConfig.background === 'gradient'
+    const isFullBleed = sidebarStyleConfig.fullBleed
 
+    // When fullBleed, background/border/color are on the outer container div
     return (
       <div
         className="p-4 h-full"
         style={{
-          background: isGradient ? background : undefined,
-          backgroundColor: !isGradient ? background : undefined,
-          borderRadius: sidebarStyleConfig.fullHeight ? '0' : borderRadius,
-          border,
-          color: textColor,
+          background: isFullBleed ? undefined : (isGradient ? background : undefined),
+          backgroundColor: isFullBleed ? undefined : (!isGradient ? background : undefined),
+          borderRadius: isFullBleed ? '0' : borderRadius,
+          border: isFullBleed ? 'none' : border,
+          color: isFullBleed ? undefined : textColor,
         }}
       >
         {sidebarPageSections.map((section) => (
@@ -441,11 +442,12 @@ export default function CVPaginator({
     )
     const isGradient = sidebarStyleConfig.background === 'gradient'
 
+    const isFullBleed = sidebarStyleConfig.fullBleed
     return {
-      background: isGradient ? background : undefined,
-      backgroundColor: !isGradient ? background : undefined,
-      borderRadius: sidebarStyleConfig.fullHeight ? '0' : borderRadius,
-      border,
+      background: isFullBleed ? undefined : (isGradient ? background : undefined),
+      backgroundColor: isFullBleed ? undefined : (!isGradient ? background : undefined),
+      borderRadius: isFullBleed ? '0' : borderRadius,
+      border: isFullBleed ? 'none' : border,
     }
   }
 
@@ -518,40 +520,74 @@ export default function CVPaginator({
             const hasSidebar = sidebarSections && sidebarSections.length > 0
             const actualSidebarWidth = sidebarStyleConfig.width || sidebarWidth
 
+            const isFullBleed = sidebarStyleConfig.fullBleed && hasSidebar
+            const P = A4_PADDING_PX
+
+            // When fullBleed: main content handles its own padding (no CVPage padding)
+            // Sidebar-facing side has no padding since the gap provides separation
             const mainContentEl = (
-              <div style={{ flex: 1 }}>
-                {pageContent.main.map((section) => (
-                  <div key={section.id} className="overflow-hidden">
-                    {section.element}
+              <div style={{
+                flex: 1,
+                ...(isFullBleed ? {
+                  padding: sidebarPosition === 'left'
+                    ? `${P}px ${P}px ${P}px 0`
+                    : `${P}px 0 ${P}px ${P}px`,
+                  display: 'flex',
+                  flexDirection: 'column' as const,
+                } : {}),
+              }}>
+                <div style={isFullBleed ? { flex: 1 } : undefined}>
+                  {pageContent.main.map((section) => (
+                    <div key={section.id} className="overflow-hidden">
+                      {section.element}
+                    </div>
+                  ))}
+                </div>
+                {isFullBleed && isLastPage && footerChild && (
+                  <div className="shrink-0 mt-auto">
+                    {footerChild}
                   </div>
-                ))}
+                )}
               </div>
             )
 
-            // Calculate sidebar container margin for fullHeight mode
-            const sidebarContainerStyle = sidebarStyleConfig.fullHeight
-              ? { width: `${actualSidebarWidth}%`, flexShrink: 0, margin: '-40px 0', paddingTop: '40px', paddingBottom: '40px' }
-              : { width: `${actualSidebarWidth}%`, flexShrink: 0 }
+            // Sidebar container style
+            const sidebarContainerStyle: React.CSSProperties = (() => {
+              if (isFullBleed) {
+                // fullBleed: CVPage has no padding, so sidebar fills full page height naturally
+                const bg = getSidebarBackground(sidebarStyleConfig.background, theme.colors.primary, theme.colors.accent)
+                const textColor = getSidebarTextColor(sidebarStyleConfig.background, theme.colors.primary, theme.colors.text)
+                const isGradient = sidebarStyleConfig.background === 'gradient'
+                // Padding: 48px on outer edge + top + bottom, smaller on inner edge (gap provides separation)
+                const padding = sidebarPosition === 'left'
+                  ? `${P}px 0 ${P}px ${P}px`
+                  : `${P}px ${P}px ${P}px 0`
+                return {
+                  width: `${actualSidebarWidth}%`,
+                  flexShrink: 0,
+                  padding,
+                  background: isGradient ? bg : undefined,
+                  backgroundColor: !isGradient ? bg : undefined,
+                  color: textColor,
+                }
+              }
+              return { width: `${actualSidebarWidth}%`, flexShrink: 0 }
+            })()
+
+            const sidebarEl = (
+              <div className="h-full" style={sidebarContainerStyle}>
+                {pageContent.sidebar.length > 0
+                  ? renderSidebarForPage(pageContent.sidebar, isFirstPage)
+                  : <div className="p-4 h-full" style={getEmptySidebarStyle()} />
+                }
+              </div>
+            )
 
             const pageEl = hasSidebar ? (
-              <div className="flex h-full" style={{ gap: sidebarStyleConfig.fullHeight ? '0' : `${SIDEBAR_GAP_PX}px` }}>
-                {sidebarPosition === 'left' && (
-                  <div className="h-full" style={sidebarContainerStyle}>
-                    {pageContent.sidebar.length > 0
-                      ? renderSidebarForPage(pageContent.sidebar, isFirstPage)
-                      : <div className="p-4 h-full" style={getEmptySidebarStyle()} />
-                    }
-                  </div>
-                )}
+              <div className="flex h-full" style={{ gap: `${SIDEBAR_GAP_PX}px` }}>
+                {sidebarPosition === 'left' && sidebarEl}
                 {mainContentEl}
-                {sidebarPosition === 'right' && (
-                  <div className="h-full" style={sidebarContainerStyle}>
-                    {pageContent.sidebar.length > 0
-                      ? renderSidebarForPage(pageContent.sidebar, isFirstPage)
-                      : <div className="p-4 h-full" style={getEmptySidebarStyle()} />
-                    }
-                  </div>
-                )}
+                {sidebarPosition === 'right' && sidebarEl}
               </div>
             ) : (
               mainContentEl
@@ -575,7 +611,8 @@ export default function CVPaginator({
                     theme={theme}
                     pageNumber={pageIndex + 1}
                     totalPages={pages.length}
-                    footer={isLastPage ? footerChild : undefined}
+                    footer={isLastPage && !isFullBleed ? footerChild : undefined}
+                    fullBleedSidebar={isFullBleed ? sidebarPosition : undefined}
                   >
                     {pageEl}
                   </CVPage>
@@ -596,16 +633,18 @@ export default function CVPaginator({
                 transformOrigin: 'top left',
               }}
             >
-              <CVPage theme={theme} pageNumber={1} totalPages={1}>
+              <CVPage
+                theme={theme}
+                pageNumber={1}
+                totalPages={1}
+                fullBleedSidebar={sidebarStyleConfig.fullBleed ? sidebarPosition : undefined}
+              >
                 {sidebarSections && sidebarSections.length > 0 ? (
-                  <div className="flex h-full" style={{ gap: sidebarStyleConfig.fullHeight ? '0' : `${SIDEBAR_GAP_PX}px` }}>
+                  <div className="flex h-full" style={{ gap: `${SIDEBAR_GAP_PX}px` }}>
                     {sidebarPosition === 'left' && (
                       <div
                         className="h-full"
-                        style={sidebarStyleConfig.fullHeight
-                          ? { width: `${sidebarStyleConfig.width || sidebarWidth}%`, flexShrink: 0, margin: '-40px 0', paddingTop: '40px', paddingBottom: '40px' }
-                          : { width: `${sidebarStyleConfig.width || sidebarWidth}%`, flexShrink: 0 }
-                        }
+                        style={{ width: `${sidebarStyleConfig.width || sidebarWidth}%`, flexShrink: 0 }}
                       >
                         <div
                           className="p-4 h-full"
@@ -619,10 +658,7 @@ export default function CVPaginator({
                     {sidebarPosition === 'right' && (
                       <div
                         className="h-full"
-                        style={sidebarStyleConfig.fullHeight
-                          ? { width: `${sidebarStyleConfig.width || sidebarWidth}%`, flexShrink: 0, margin: '-40px 0', paddingTop: '40px', paddingBottom: '40px' }
-                          : { width: `${sidebarStyleConfig.width || sidebarWidth}%`, flexShrink: 0 }
-                        }
+                        style={{ width: `${sidebarStyleConfig.width || sidebarWidth}%`, flexShrink: 0 }}
                       >
                         <div
                           className="p-4 h-full"

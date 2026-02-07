@@ -136,9 +136,7 @@ export default function EducationForm() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">
-          Education
-        </h3>
+        <div></div>
         <Button
           onClick={addEducation}
           size="sm"

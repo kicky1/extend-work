@@ -106,6 +106,14 @@ function GridStyle({ languages, theme }: { languages: Language[]; theme: CVTheme
   )
 }
 
+function getSpacing(spacing?: string) {
+  switch (spacing) {
+    case 'compact': return 'mt-4'
+    case 'relaxed': return 'mt-8'
+    default: return 'mt-6'
+  }
+}
+
 export default function LanguagesSection({ languages, theme, compact = false }: LanguagesSectionProps) {
   if (languages.length === 0) return null
 
@@ -155,7 +163,7 @@ export default function LanguagesSection({ languages, theme, compact = false }: 
 
   return (
     <HighlightWrapper sectionRef={{ type: 'languages' }}>
-      <section className="mt-6">
+      <section className={getSpacing(theme.spacing)}>
         <h2
           className="text-lg font-bold uppercase tracking-wide mb-2"
           style={{

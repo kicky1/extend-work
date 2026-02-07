@@ -132,9 +132,7 @@ export default function CertificatesForm() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">
-          Certificates
-        </h3>
+        <div></div>
         <Button
           onClick={addCertificate}
           size="sm"

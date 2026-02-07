@@ -136,6 +136,9 @@ export default function EvaluationPanel() {
     setIsFixingAll(true)
     setFixAllProgress({ current: 0, total: remainingIssues.length })
 
+    let hitUpgradeLimit = false
+    let fixesApplied = 0
+
     for (let i = 0; i < remainingIssues.length; i++) {
       const issue = remainingIssues[i]
       setFixAllProgress({ current: i + 1, total: remainingIssues.length })
@@ -153,6 +156,7 @@ export default function EvaluationPanel() {
           if (data.code === 'NOT_PRO' || data.code === 'LIMIT_EXCEEDED') {
             setUpgradeReason(data.code === 'NOT_PRO' ? 'not_pro' : 'limit_exceeded')
             setShowUpgradeModal(true)
+            hitUpgradeLimit = true
             break
           }
           continue
@@ -164,6 +168,7 @@ export default function EvaluationPanel() {
           const { applyToolResults } = await import('@/lib/utils/apply-tool-results')
           applyToolResults(data.toolResults)
           markIssueFixed(issue.id)
+          fixesApplied++
         }
       } catch {
         // Continue to next issue on error
@@ -173,6 +178,14 @@ export default function EvaluationPanel() {
 
     setIsFixingAll(false)
     setFixAllProgress({ current: 0, total: 0 })
+
+    // Auto re-evaluate after fixes are applied
+    if (!hitUpgradeLimit && fixesApplied > 0) {
+      // Use fresh cvData from store since fixes have mutated it
+      const latestCvData = useCVStore.getState().cvData
+      await evaluate(latestCvData, jobDescription || undefined, true)
+    }
+
     refetch()
   }
 
@@ -183,6 +196,8 @@ export default function EvaluationPanel() {
 
   return (
     <>
+    {/* Backdrop — click outside to close */}
+    <div className="fixed inset-0 z-40" onClick={closePanel} />
     <div className="fixed top-0 right-0 h-full w-96 bg-white border-l border-gray-200 shadow-xl z-50 flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">

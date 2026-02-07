@@ -13,7 +13,6 @@ export interface ApplyResult {
   success: boolean
   description: string | null
   error?: string
-  previousValue?: unknown // For undo support
 }
 
 /**
@@ -75,68 +74,8 @@ function validateToolResult(action: string, data: Record<string, unknown>): stri
 }
 
 /**
- * Get current value for undo support
- */
-function getPreviousValue(action: string, data: Record<string, unknown>): unknown {
-  const { cvData } = useCVStore.getState()
-
-  switch (action) {
-    case 'updatePersonalInfo':
-      return { ...cvData.personalInfo }
-    case 'updateSummary':
-      return cvData.summary
-    case 'updateWorkExperience': {
-      const id = data.id as string
-      return cvData.workExperience.find(e => e.id === id)
-    }
-    case 'deleteWorkExperience': {
-      const id = data.id as string
-      return cvData.workExperience.find(e => e.id === id)
-    }
-    case 'updateEducation': {
-      const id = data.id as string
-      return cvData.education.find(e => e.id === id)
-    }
-    case 'deleteEducation': {
-      const id = data.id as string
-      return cvData.education.find(e => e.id === id)
-    }
-    case 'updateSkill': {
-      const id = data.id as string
-      return cvData.skills.find(e => e.id === id)
-    }
-    case 'deleteSkill': {
-      const id = data.id as string
-      return cvData.skills.find(e => e.id === id)
-    }
-    case 'updateLanguage': {
-      const id = data.id as string
-      return cvData.languages.find(e => e.id === id)
-    }
-    case 'deleteLanguage': {
-      const id = data.id as string
-      return cvData.languages.find(e => e.id === id)
-    }
-    case 'updateCertificate': {
-      const id = data.id as string
-      return cvData.certificates.find(e => e.id === id)
-    }
-    case 'deleteCertificate': {
-      const id = data.id as string
-      return cvData.certificates.find(e => e.id === id)
-    }
-    case 'updateTheme':
-      return { ...cvData.theme }
-    case 'reorderSections':
-      return [...(cvData.sectionOrder || [])]
-    default:
-      return undefined
-  }
-}
-
-/**
  * Apply a single tool result to the CV store
- * Returns detailed result with success status, description, and previous value for undo
+ * Returns detailed result with success status and description
  */
 export function applyToolResult(result: ToolResult): ApplyResult {
   if (!result.success || !result.data) {
@@ -152,20 +91,17 @@ export function applyToolResult(result: ToolResult): ApplyResult {
     return { success: false, description: null, error: validationError }
   }
 
-  // Get previous value for undo support
-  const previousValue = getPreviousValue(action, data)
-
   try {
     switch (action) {
     case 'updatePersonalInfo': {
       store.updatePersonalInfo(data as Parameters<typeof store.updatePersonalInfo>[0])
       const fields = Object.keys(data).filter(k => data[k] !== undefined)
-      return { success: true, description: `Updated ${fields.join(', ')}`, previousValue }
+      return { success: true, description: `Updated ${fields.join(', ')}` }
     }
 
     case 'updateSummary': {
       store.updateSummary((data as { summary: string }).summary)
-      return { success: true, description: 'Updated professional summary', previousValue }
+      return { success: true, description: 'Updated professional summary' }
     }
 
     case 'addWorkExperience': {
@@ -177,27 +113,35 @@ export function applyToolResult(result: ToolResult): ApplyResult {
       }
       const company = (data as { company?: string }).company
       const position = (data as { position?: string }).position
-      return {
-        success: true,
-        description: position && company ? `Added ${position} at ${company}` : company ? `Added role at ${company}` : 'Added work experience',
-        previousValue: newExpId // Store new ID for undo (delete)
-      }
+      const startDate = (data as { startDate?: string }).startDate
+      let desc = position && company ? `Added ${position} at ${company}` : company ? `Added role at ${company}` : 'Added work experience'
+      if (startDate) desc += ` (${startDate})`
+      return { success: true, description: desc }
     }
 
     case 'updateWorkExperience': {
       const { id, updates } = data as { id: string; updates: Partial<WorkExperience> }
       store.updateWorkExperience(id, updates)
-      const fields = Object.keys(updates).filter(k => updates[k as keyof typeof updates] !== undefined)
-      return { success: true, description: `Updated experience: ${fields.join(', ')}`, previousValue }
+      const parts: string[] = []
+      if (updates.position) parts.push(`position → '${updates.position}'`)
+      if (updates.company) parts.push(`company → '${updates.company}'`)
+      if (updates.location) parts.push(`location → '${updates.location}'`)
+      if (updates.startDate) parts.push(`start → '${updates.startDate}'`)
+      if (updates.endDate) parts.push(`end → '${updates.endDate}'`)
+      if (updates.current !== undefined) parts.push(updates.current ? 'marked as current' : 'marked as ended')
+      if (updates.description) parts.push('description updated')
+      if (updates.achievements) parts.push(`${updates.achievements.length} achievement(s)`)
+      const desc = parts.length > 0 ? `Updated experience: ${parts.join(', ')}` : 'Updated experience'
+      return { success: true, description: desc }
     }
 
     case 'deleteWorkExperience': {
-      const prevExp = previousValue as WorkExperience | undefined
+      const { cvData } = useCVStore.getState()
+      const prevExp = cvData.workExperience.find(e => e.id === (data as { id: string }).id)
       store.removeWorkExperience((data as { id: string }).id)
       return {
         success: true,
         description: prevExp ? `Deleted ${prevExp.position} at ${prevExp.company}` : 'Deleted work experience',
-        previousValue
       }
     }
 
@@ -213,24 +157,31 @@ export function applyToolResult(result: ToolResult): ApplyResult {
       return {
         success: true,
         description: degree && institution ? `Added ${degree} at ${institution}` : institution ? `Added education at ${institution}` : 'Added education',
-        previousValue: newEduId
       }
     }
 
     case 'updateEducation': {
       const { id, updates } = data as { id: string; updates: Partial<Education> }
       store.updateEducation(id, updates)
-      const fields = Object.keys(updates).filter(k => updates[k as keyof typeof updates] !== undefined)
-      return { success: true, description: `Updated education: ${fields.join(', ')}`, previousValue }
+      const parts: string[] = []
+      if (updates.degree) parts.push(`degree → '${updates.degree}'`)
+      if (updates.field) parts.push(`field → '${updates.field}'`)
+      if (updates.institution) parts.push(`institution → '${updates.institution}'`)
+      if (updates.startDate) parts.push(`start → '${updates.startDate}'`)
+      if (updates.endDate) parts.push(`end → '${updates.endDate}'`)
+      if (updates.gpa) parts.push(`GPA → '${updates.gpa}'`)
+      if (updates.description) parts.push('description updated')
+      const desc = parts.length > 0 ? `Updated education: ${parts.join(', ')}` : 'Updated education'
+      return { success: true, description: desc }
     }
 
     case 'deleteEducation': {
-      const prevEdu = previousValue as Education | undefined
+      const { cvData } = useCVStore.getState()
+      const prevEdu = cvData.education.find(e => e.id === (data as { id: string }).id)
       store.removeEducation((data as { id: string }).id)
       return {
         success: true,
         description: prevEdu ? `Deleted ${prevEdu.degree} at ${prevEdu.institution}` : 'Deleted education',
-        previousValue
       }
     }
 
@@ -242,26 +193,33 @@ export function applyToolResult(result: ToolResult): ApplyResult {
         store.updateSkill(newSkillId, skillData)
       }
       const skillName = (data as { name?: string }).name
+      const skillLevel = (data as { level?: string }).level
+      const skillCategory = (data as { category?: string }).category
+      const skillParts = [skillName, skillLevel, skillCategory].filter(Boolean)
       return {
         success: true,
-        description: skillName ? `Added skill: ${skillName}` : 'Added skill',
-        previousValue: newSkillId
+        description: skillParts.length > 0 ? `Added skill: ${skillParts.join(' · ')}` : 'Added skill',
       }
     }
 
     case 'updateSkill': {
       const { id, updates } = data as { id: string; updates: Partial<Skill> }
       store.updateSkill(id, updates)
-      return { success: true, description: `Updated skill: ${updates.name || 'details changed'}`, previousValue }
+      const parts: string[] = []
+      if (updates.name) parts.push(updates.name)
+      if (updates.level) parts.push(updates.level)
+      if (updates.category) parts.push(updates.category)
+      const desc = parts.length > 0 ? `Updated skill: ${parts.join(' · ')}` : 'Updated skill'
+      return { success: true, description: desc }
     }
 
     case 'deleteSkill': {
-      const prevSkill = previousValue as Skill | undefined
+      const { cvData } = useCVStore.getState()
+      const prevSkill = cvData.skills.find(e => e.id === (data as { id: string }).id)
       store.removeSkill((data as { id: string }).id)
       return {
         success: true,
         description: prevSkill ? `Deleted skill: ${prevSkill.name}` : 'Deleted skill',
-        previousValue
       }
     }
 
@@ -273,26 +231,30 @@ export function applyToolResult(result: ToolResult): ApplyResult {
         store.updateLanguage(newLangId, langData)
       }
       const langName = (data as { name?: string }).name
+      const langLevel = (data as { level?: string }).level
       return {
         success: true,
-        description: langName ? `Added language: ${langName}` : 'Added language',
-        previousValue: newLangId
+        description: langName ? `Added language: ${[langName, langLevel].filter(Boolean).join(' · ')}` : 'Added language',
       }
     }
 
     case 'updateLanguage': {
       const { id, updates } = data as { id: string; updates: Partial<Language> }
       store.updateLanguage(id, updates)
-      return { success: true, description: `Updated language: ${updates.name || 'level changed'}`, previousValue }
+      const parts: string[] = []
+      if (updates.name) parts.push(updates.name)
+      if (updates.level) parts.push(updates.level)
+      const desc = parts.length > 0 ? `Updated language: ${parts.join(' · ')}` : 'Updated language'
+      return { success: true, description: desc }
     }
 
     case 'deleteLanguage': {
-      const prevLang = previousValue as Language | undefined
+      const { cvData } = useCVStore.getState()
+      const prevLang = cvData.languages.find(e => e.id === (data as { id: string }).id)
       store.removeLanguage((data as { id: string }).id)
       return {
         success: true,
         description: prevLang ? `Deleted language: ${prevLang.name}` : 'Deleted language',
-        previousValue
       }
     }
 
@@ -304,32 +266,37 @@ export function applyToolResult(result: ToolResult): ApplyResult {
         store.updateCertificate(newCertId, certData)
       }
       const certName = (data as { name?: string }).name
+      const certIssuer = (data as { issuer?: string }).issuer
       return {
         success: true,
-        description: certName ? `Added certificate: ${certName}` : 'Added certificate',
-        previousValue: newCertId
+        description: certName ? `Added certificate: ${certName}${certIssuer ? ` (${certIssuer})` : ''}` : 'Added certificate',
       }
     }
 
     case 'updateCertificate': {
       const { id, updates } = data as { id: string; updates: Partial<Certificate> }
       store.updateCertificate(id, updates)
-      return { success: true, description: `Updated certificate: ${updates.name || 'details changed'}`, previousValue }
+      const parts: string[] = []
+      if (updates.name) parts.push(`name → '${updates.name}'`)
+      if (updates.issuer) parts.push(`issuer → '${updates.issuer}'`)
+      if (updates.issueDate) parts.push(`issued ${updates.issueDate}`)
+      const desc = parts.length > 0 ? `Updated certificate: ${parts.join(', ')}` : 'Updated certificate'
+      return { success: true, description: desc }
     }
 
     case 'deleteCertificate': {
-      const prevCert = previousValue as Certificate | undefined
+      const { cvData } = useCVStore.getState()
+      const prevCert = cvData.certificates.find(e => e.id === (data as { id: string }).id)
       store.removeCertificate((data as { id: string }).id)
       return {
         success: true,
         description: prevCert ? `Deleted certificate: ${prevCert.name}` : 'Deleted certificate',
-        previousValue
       }
     }
 
     case 'updateFooter': {
       store.updateFooter(data as Parameters<typeof store.updateFooter>[0])
-      return { success: true, description: 'Updated footer', previousValue }
+      return { success: true, description: 'Updated footer' }
     }
 
     case 'addCustomCategory': {
@@ -337,7 +304,6 @@ export function applyToolResult(result: ToolResult): ApplyResult {
       return {
         success: true,
         description: `Added category: ${(data as { category: string }).category}`,
-        previousValue
       }
     }
 
@@ -346,7 +312,6 @@ export function applyToolResult(result: ToolResult): ApplyResult {
       return {
         success: true,
         description: `Removed category: ${(data as { category: string }).category}`,
-        previousValue
       }
     }
 
@@ -356,14 +321,13 @@ export function applyToolResult(result: ToolResult): ApplyResult {
       return {
         success: true,
         description: themeData.preset ? `Applied ${themeData.preset} theme` : 'Updated theme',
-        previousValue
       }
     }
 
     case 'reorderSections': {
       const { order } = data as { order: CVSectionType[] }
       store.updateSectionOrder(order)
-      return { success: true, description: 'Reordered sections', previousValue }
+      return { success: true, description: 'Reordered sections' }
     }
 
     default:
@@ -378,7 +342,7 @@ export function applyToolResult(result: ToolResult): ApplyResult {
 
 /**
  * Apply multiple tool results to the CV store
- * Returns an array of results with descriptions and undo info
+ * Returns an array of results with descriptions
  */
 export function applyToolResults(results: ToolResult[]): ApplyResult[] {
   const applied: ApplyResult[] = []
@@ -387,152 +351,6 @@ export function applyToolResults(results: ToolResult[]): ApplyResult[] {
     applied.push(applyResult)
   }
   return applied
-}
-
-/**
- * Undo a previously applied tool result
- * Takes the action and previousValue from ApplyResult
- */
-export function undoToolResult(action: string, previousValue: unknown): boolean {
-  const store = useCVStore.getState()
-
-  try {
-    switch (action) {
-      case 'updatePersonalInfo':
-        store.updatePersonalInfo(previousValue as Parameters<typeof store.updatePersonalInfo>[0])
-        return true
-
-      case 'updateSummary':
-        store.updateSummary(previousValue as string)
-        return true
-
-      case 'addWorkExperience':
-        // previousValue is the ID of the added item
-        if (previousValue) store.removeWorkExperience(previousValue as string)
-        return true
-
-      case 'updateWorkExperience':
-        if (previousValue) {
-          const prev = previousValue as WorkExperience
-          store.updateWorkExperience(prev.id, prev)
-        }
-        return true
-
-      case 'deleteWorkExperience':
-        // Restore the deleted item
-        if (previousValue) {
-          store.addWorkExperience()
-          const newId = useCVStore.getState().cvData.workExperience.at(-1)?.id
-          if (newId) {
-            const { id: _id, ...data } = previousValue as WorkExperience
-            store.updateWorkExperience(newId, data)
-          }
-        }
-        return true
-
-      case 'addEducation':
-        if (previousValue) store.removeEducation(previousValue as string)
-        return true
-
-      case 'updateEducation':
-        if (previousValue) {
-          const prev = previousValue as Education
-          store.updateEducation(prev.id, prev)
-        }
-        return true
-
-      case 'deleteEducation':
-        if (previousValue) {
-          store.addEducation()
-          const newId = useCVStore.getState().cvData.education.at(-1)?.id
-          if (newId) {
-            const { id: _id, ...data } = previousValue as Education
-            store.updateEducation(newId, data)
-          }
-        }
-        return true
-
-      case 'addSkill':
-        if (previousValue) store.removeSkill(previousValue as string)
-        return true
-
-      case 'updateSkill':
-        if (previousValue) {
-          const prev = previousValue as Skill
-          store.updateSkill(prev.id, prev)
-        }
-        return true
-
-      case 'deleteSkill':
-        if (previousValue) {
-          store.addSkill()
-          const newId = useCVStore.getState().cvData.skills.at(-1)?.id
-          if (newId) {
-            const { id: _id, ...data } = previousValue as Skill
-            store.updateSkill(newId, data)
-          }
-        }
-        return true
-
-      case 'addLanguage':
-        if (previousValue) store.removeLanguage(previousValue as string)
-        return true
-
-      case 'updateLanguage':
-        if (previousValue) {
-          const prev = previousValue as Language
-          store.updateLanguage(prev.id, prev)
-        }
-        return true
-
-      case 'deleteLanguage':
-        if (previousValue) {
-          store.addLanguage()
-          const newId = useCVStore.getState().cvData.languages.at(-1)?.id
-          if (newId) {
-            const { id: _id, ...data } = previousValue as Language
-            store.updateLanguage(newId, data)
-          }
-        }
-        return true
-
-      case 'addCertificate':
-        if (previousValue) store.removeCertificate(previousValue as string)
-        return true
-
-      case 'updateCertificate':
-        if (previousValue) {
-          const prev = previousValue as Certificate
-          store.updateCertificate(prev.id, prev)
-        }
-        return true
-
-      case 'deleteCertificate':
-        if (previousValue) {
-          store.addCertificate()
-          const newId = useCVStore.getState().cvData.certificates.at(-1)?.id
-          if (newId) {
-            const { id: _id, ...data } = previousValue as Certificate
-            store.updateCertificate(newId, data)
-          }
-        }
-        return true
-
-      case 'updateTheme':
-        if (previousValue) store.updateTheme(previousValue as Partial<CVTheme>)
-        return true
-
-      case 'reorderSections':
-        if (previousValue) store.updateSectionOrder(previousValue as CVSectionType[])
-        return true
-
-      default:
-        return false
-    }
-  } catch (err) {
-    console.error(`[undoToolResult] Error undoing ${action}:`, err)
-    return false
-  }
 }
 
 /**

@@ -1,59 +1,68 @@
-export function buildCVSummary(cvData: any): string {
+import type { CVData } from '@/lib/types/cv'
+
+interface BuildCVSummaryOptions {
+  maxExperiences?: number
+  maxSkills?: number
+}
+
+export function buildCVSummary(cvData: CVData, options?: BuildCVSummaryOptions): string {
   const parts: string[] = []
 
-  // Personal info
   if (cvData.personalInfo) {
     parts.push(`Name: ${cvData.personalInfo.fullName || 'Not specified'}`)
-    if (cvData.personalInfo.location) {
-      parts.push(`Location: ${cvData.personalInfo.location}`)
-    }
+    if (cvData.personalInfo.location) parts.push(`Location: ${cvData.personalInfo.location}`)
   }
 
-  // Summary
-  if (cvData.summary) {
-    parts.push(`\nProfessional Summary:\n${cvData.summary}`)
-  }
+  if (cvData.summary) parts.push(`\nProfessional Summary:\n${cvData.summary}`)
 
-  // Work experience
   if (cvData.workExperience?.length > 0) {
     parts.push('\nWork Experience:')
-    for (const exp of cvData.workExperience) {
+    const experiences = options?.maxExperiences
+      ? cvData.workExperience.slice(0, options.maxExperiences)
+      : cvData.workExperience
+    for (const exp of experiences) {
       const duration = exp.current ? `${exp.startDate} - Present` : `${exp.startDate} - ${exp.endDate}`
       parts.push(`- ${exp.position} at ${exp.company} (${duration})`)
-      if (exp.description) {
-        parts.push(`  ${exp.description}`)
-      }
+      if (exp.description) parts.push(`  ${exp.description}`)
       if (exp.achievements?.length > 0) {
         parts.push(`  Achievements: ${exp.achievements.join('; ')}`)
       }
     }
   }
 
-  // Education
   if (cvData.education?.length > 0) {
     parts.push('\nEducation:')
     for (const edu of cvData.education) {
       parts.push(`- ${edu.degree} in ${edu.field} from ${edu.institution}`)
+      if (edu.gpa) parts.push(`  GPA: ${edu.gpa}`)
+      if (edu.description) parts.push(`  ${edu.description}`)
     }
   }
 
-  // Skills
   if (cvData.skills?.length > 0) {
-    const skillNames = cvData.skills.map((s: any) => s.name)
-    parts.push(`\nSkills: ${skillNames.join(', ')}`)
+    const skills = options?.maxSkills
+      ? cvData.skills.slice(0, options.maxSkills)
+      : cvData.skills
+    const grouped: Record<string, string[]> = {}
+    for (const s of skills) {
+      const cat = s.category || 'Other'
+      if (!grouped[cat]) grouped[cat] = []
+      grouped[cat].push(s.level ? `${s.name} (${s.level})` : s.name)
+    }
+    parts.push('\nSkills:')
+    for (const [cat, skillList] of Object.entries(grouped)) {
+      parts.push(`- ${cat}: ${skillList.join(', ')}`)
+    }
   }
 
-  // Languages
   if (cvData.languages?.length > 0) {
-    const langs = cvData.languages.map((l: any) => `${l.name} (${l.level})`)
-    parts.push(`\nLanguages: ${langs.join(', ')}`)
+    parts.push(`\nLanguages: ${cvData.languages.map((l) => l.level ? `${l.name} (${l.level})` : l.name).join(', ')}`)
   }
 
-  // Certificates
   if (cvData.certificates?.length > 0) {
-    parts.push('\nCertifications:')
-    for (const cert of cvData.certificates) {
-      parts.push(`- ${cert.name} from ${cert.issuer}`)
+    parts.push('\nCertificates:')
+    for (const c of cvData.certificates) {
+      parts.push(`- ${c.name}${c.issuer ? ` — ${c.issuer}` : ''}${c.issueDate ? ` (${c.issueDate})` : ''}`)
     }
   }
 

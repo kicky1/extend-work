@@ -738,7 +738,7 @@ export default function CVDocument({ cvData }: CVDocumentProps) {
   }
 
   // Sidebar layouts (two-column, sidebar-left, sidebar-right) - use CVPaginator with sidebar
-  if (layout === 'two-column' || layout === 'sidebar-left') {
+  if (layout === 'sidebar-left') {
     return (
       <div
         className="cv-preview"

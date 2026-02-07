@@ -203,18 +203,6 @@ export default function LanguagesForm() {
           </SortableList>
         )}
       </AccordionSection>
-
-      {/* Tips Section */}
-      <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-        <h4 className="text-sm font-semibold text-foreground mb-2">
-          Tips for Adding Languages
-        </h4>
-        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-          <li>List your strongest languages first</li>
-          <li>Be honest about your proficiency level</li>
-          <li>Include both spoken and programming languages if relevant</li>
-        </ul>
-      </div>
     </div>
   )
 }

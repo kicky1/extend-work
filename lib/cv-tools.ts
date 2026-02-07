@@ -131,9 +131,8 @@ const updateSkillSchema = z.object({
 
 // Expanded layout options
 const themeLayoutSchema = z.enum([
-  'classic', 'modern', 'minimal', 'two-column',
-  'sidebar-left', 'sidebar-right', 'top-banner',
-  'compact', 'timeline', 'magazine'
+  'classic', 'sidebar-left', 'sidebar-right',
+  'top-banner', 'compact', 'timeline', 'magazine'
 ])
 
 // Expanded theme presets (26 total)
@@ -196,7 +195,7 @@ const sidebarStyleSchema = z.object({
   corners: z.enum(['none', 'subtle', 'rounded', 'pill']).optional().describe("Sidebar corner rounding"),
   background: z.enum(['solid', 'light', 'gradient', 'none']).optional().describe("Sidebar background style"),
   border: z.enum(['none', 'subtle', 'accent']).optional().describe("Sidebar border style"),
-  fullHeight: z.boolean().optional().describe("Whether sidebar extends full page height"),
+  fullBleed: z.boolean().optional().describe("Whether sidebar extends flush to the page edge (top, bottom, and outer side) with no margin"),
   width: z.enum(['25', '30', '35', '40']).optional().describe("Sidebar width percentage: 25, 30, 35, or 40"),
 })
 
@@ -214,7 +213,7 @@ const updateThemeSchema = z.object({
     heading: z.string().optional().describe("Font for headings"),
     body: z.string().optional().describe("Font for body text"),
   }).optional().describe("Custom font overrides"),
-  layout: themeLayoutSchema.optional().describe("Layout: classic, modern, minimal, two-column, sidebar-left, sidebar-right, top-banner, compact, timeline, or magazine"),
+  layout: themeLayoutSchema.optional().describe("Layout: classic, sidebar-left, sidebar-right, top-banner, compact, timeline, or magazine"),
   spacing: spacingSchema.optional().describe("Content spacing: compact, normal, or relaxed"),
   headerStyle: headerStyleSchema.optional().describe("Header style: centered, left-aligned, split, banner, compact, photo-focus, gradient, or bordered"),
   experienceStyle: experienceStyleSchema.optional().describe("Experience section style: classic, timeline, cards, compact, or detailed"),
@@ -459,7 +458,7 @@ Purpose-specific designs:
 ## Theme Style Options
 
 ### Layouts
-classic, modern, minimal, two-column, sidebar-left, sidebar-right, top-banner, compact, timeline, magazine
+classic, sidebar-left, sidebar-right, top-banner, compact, timeline, magazine
 
 ### Header Styles
 centered, left-aligned, split, banner, compact, photo-focus, gradient, bordered
@@ -499,7 +498,7 @@ For sidebar layouts (sidebar-left, sidebar-right):
 - corners: none, subtle, rounded, pill
 - background: solid, light, gradient, none
 - border: none, subtle, accent
-- fullHeight: true/false
+- fullBleed: true/false (sidebar extends flush to page edge)
 - width: 25, 30, 35, 40 (percentage)
 
 ### Other Options

@@ -23,6 +23,7 @@ interface CVPageProps {
   className?: string
   isEditing?: boolean
   footer?: React.ReactNode
+  fullBleedSidebar?: 'left' | 'right'
 }
 
 export default function CVPage({
@@ -33,6 +34,7 @@ export default function CVPage({
   className = '',
   isEditing = false,
   footer,
+  fullBleedSidebar,
 }: CVPageProps) {
   const showPageNumbers = theme.pageNumbers?.show && pageNumber && totalPages && totalPages > 1
   const pageNumberPosition = theme.pageNumbers?.position || 'center'
@@ -46,19 +48,29 @@ export default function CVPage({
   // Page number takes ~30px when shown
   const pageNumberHeight = showPageNumbers ? 30 : 0
 
+  const outerStyle = {
+    width: `${A4_WIDTH_PX}px`,
+    height: `${A4_HEIGHT_PX}px`,
+    minWidth: `${A4_WIDTH_PX}px`,
+    minHeight: `${A4_HEIGHT_PX}px`,
+    fontFamily: theme.fonts.body,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.background,
+  }
+
+  // When fullBleedSidebar: no padding, no footer/page-numbers — paginator handles them inside the main content column
+  if (fullBleedSidebar) {
+    return (
+      <div className={`cv-page bg-white shadow-lg relative ${className}`} style={outerStyle}>
+        <div style={{ width: '100%', height: '100%' }}>
+          {children}
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div
-      className={`cv-page bg-white shadow-lg relative ${className}`}
-      style={{
-        width: `${A4_WIDTH_PX}px`,
-        height: `${A4_HEIGHT_PX}px`,
-        minWidth: `${A4_WIDTH_PX}px`,
-        minHeight: `${A4_HEIGHT_PX}px`,
-        fontFamily: theme.fonts.body,
-        color: theme.colors.text,
-        backgroundColor: theme.colors.background,
-      }}
-    >
+    <div className={`cv-page bg-white shadow-lg relative ${className}`} style={outerStyle}>
       {/* Page content wrapper with fixed padding */}
       <div
         className={`flex flex-col ${isEditing ? '' : 'overflow-hidden'}`}

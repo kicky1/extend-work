@@ -318,19 +318,6 @@ export default function SkillsForm() {
           </SortableList>
         )}
       </AccordionSection>
-
-      {/* Tips Section */}
-      <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-        <h4 className="text-sm font-semibold text-foreground mb-2">
-          Tips for Adding Skills
-        </h4>
-        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-          <li>Add your most relevant and strongest skills first</li>
-          <li>Use specific skill names (e.g., "React.js" instead of just "JavaScript")</li>
-          <li>Group similar skills using categories</li>
-          <li>Be honest about your proficiency level</li>
-        </ul>
-      </div>
     </div>
   )
 }

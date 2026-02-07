@@ -1,6 +1,3 @@
-import * as htmlToImage from 'html-to-image'
-import jsPDF from 'jspdf'
-
 // A4 dimensions in mm
 const A4_WIDTH_MM = 210
 const A4_HEIGHT_MM = 297
@@ -9,6 +6,7 @@ const A4_HEIGHT_MM = 297
  * Exports a single DOM element to an image data URL
  */
 async function elementToImage(element: HTMLElement): Promise<string> {
+  const htmlToImage = await import('html-to-image')
   return htmlToImage.toPng(element, {
     quality: 1.0,
     pixelRatio: 2, // Higher pixel ratio for better quality
@@ -22,17 +20,18 @@ async function elementToImage(element: HTMLElement): Promise<string> {
  */
 export async function exportToPDF(
   containerElement: HTMLElement,
-  filename: string = 'cv.pdf'
+  filename: string = 'cv.pdf',
+  pageSelector: string = '.cv-page'
 ): Promise<void> {
   try {
     console.log('Starting PDF export...')
 
-    // Find all CV page elements
-    const pageElements = containerElement.querySelectorAll('.cv-page')
+    // Find all page elements
+    const pageElements = containerElement.querySelectorAll(pageSelector)
 
     if (pageElements.length === 0) {
-      // Fallback: if no .cv-page elements found, export the entire container
-      console.log('No .cv-page elements found, exporting entire container')
+      // Fallback: if no page elements found, export the entire container
+      console.log('No page elements found, exporting entire container')
       await exportSinglePage(containerElement, filename)
       return
     }
@@ -40,6 +39,7 @@ export async function exportToPDF(
     console.log(`Found ${pageElements.length} page(s) to export`)
 
     // Create PDF document (A4 size)
+    const { default: jsPDF } = await import('jspdf')
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -134,6 +134,7 @@ async function exportSinglePage(
   })
 
   // Create PDF document (A4 size)
+  const { default: jsPDF } = await import('jspdf')
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',

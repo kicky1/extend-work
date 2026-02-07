@@ -17,15 +17,6 @@ export default function FooterForm() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">
-          Footer
-        </h3>
-        <Button onClick={handleReset} variant="outline" size="sm">
-          <RotateCcw data-icon="inline-start" className="w-4 h-4" />
-          Reset to Default
-        </Button>
-      </div>
 
       <Field>
         <FieldLabel htmlFor="rodo-consent">
@@ -39,6 +30,13 @@ export default function FooterForm() {
           placeholder="Enter your RODO/GDPR consent text..."
         />
       </Field>
+      <div className="flex items-center justify-between">
+        <div></div>
+        <Button onClick={handleReset} variant="outline" size="sm">
+          <RotateCcw data-icon="inline-start" className="w-4 h-4" />
+          Reset to Default
+        </Button>
+      </div>
 
       {/* Help Section */}
       <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
