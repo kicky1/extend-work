@@ -7,12 +7,16 @@ import {
   Briefcase,
   DollarSign,
   ChevronLeft,
+  PenLine,
 } from 'lucide-react'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { JobListing } from '@/lib/types/job'
 import { jobSourceConfig } from '@/lib/types/job'
+import useCoverLetterStore from '@/lib/stores/cover-letter-store'
 import { formatDistanceToNow } from 'date-fns'
 
 interface JobDetailProps {
@@ -83,6 +87,7 @@ function RenderJobText({ text }: { text: string }) {
 }
 
 export function JobDetail({ job, onBack, onApply }: JobDetailProps) {
+  const router = useRouter()
   const sourceConfig = jobSourceConfig[job.source]
 
   const formatSalary = () => {
@@ -122,10 +127,13 @@ export function JobDetail({ job, onBack, onApply }: JobDetailProps) {
           <div className="flex items-start gap-4">
             {/* Company logo */}
             {job.companyLogoUrl ? (
-              <img
+              <Image
                 src={job.companyLogoUrl}
                 alt={job.company}
+                width={64}
+                height={64}
                 className="h-16 w-16 rounded-xl object-contain bg-muted"
+                unoptimized
               />
             ) : (
               <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-muted">
@@ -167,11 +175,28 @@ export function JobDetail({ job, onBack, onApply }: JobDetailProps) {
             </div>
           )}
 
-          {/* Action button */}
-          <Button onClick={onApply} size="lg" className="w-full sm:w-auto">
-            <Briefcase className="mr-2 h-4 w-4" />
-            Apply Now
-          </Button>
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={onApply} size="lg">
+              <Briefcase className="mr-2 h-4 w-4" />
+              Apply Now
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => {
+                useCoverLetterStore.getState().setPendingGeneration({
+                  jobTitle: job.title || undefined,
+                  company: job.company || undefined,
+                  jobDescription: job.description || undefined,
+                })
+                router.push('/cover-letter')
+              }}
+            >
+              <PenLine className="mr-2 h-4 w-4" />
+              Create Cover Letter
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

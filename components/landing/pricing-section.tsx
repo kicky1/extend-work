@@ -93,12 +93,6 @@ export function PricingSection() {
           transition={{ duration: 0.25, ease: easeOut }}
           className="text-center mb-12"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-[#1a2a2a] mb-4">
-            Simple, transparent pricing
-          </h2>
-          <p className="text-[#5a6a6a] text-lg max-w-xl mx-auto mb-8">
-            Start free, upgrade when you need more power
-          </p>
 
           {/* Toggle */}
           <div className="inline-flex items-center gap-3 p-1.5 rounded-full bg-[#1a4a4a]/5 border border-[#e8e4df]">

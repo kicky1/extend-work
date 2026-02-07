@@ -1,11 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { MapPin, Building2, Clock, Bookmark, BookmarkCheck, ExternalLink, Briefcase } from 'lucide-react'
+import Image from 'next/image'
+import { MapPin, Building2, Clock, Bookmark, ExternalLink, Briefcase, PenLine } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardAction, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
+import { CompatibilityBadge } from './compatibility-badge'
+import { useRouter } from 'next/navigation'
 import useJobStore from '@/lib/stores/job-store'
+import useCoverLetterStore from '@/lib/stores/cover-letter-store'
 import type { JobListing } from '@/lib/types/job'
 import { jobSourceConfig } from '@/lib/types/job'
 import { cn } from '@/lib/utils'
@@ -15,9 +20,11 @@ interface JobCardProps {
   job: JobListing
   onClick?: () => void
   compact?: boolean
+  compatibilityScore?: number
 }
 
-export function JobCard({ job, onClick, compact = false }: JobCardProps) {
+export function JobCard({ job, onClick, compact = false, compatibilityScore }: JobCardProps) {
+  const router = useRouter()
   const { savedJobs, saveJob, unsaveJob } = useJobStore()
   const [isSaving, setIsSaving] = useState(false)
 
@@ -43,6 +50,16 @@ export function JobCard({ job, onClick, compact = false }: JobCardProps) {
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handlePrepareCoverLetter = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    useCoverLetterStore.getState().setPendingGeneration({
+      jobTitle: job.title,
+      company: job.company,
+      jobDescription: job.description || undefined,
+    })
+    router.push('/cover-letter')
   }
 
   const formatSalary = () => {
@@ -77,10 +94,13 @@ export function JobCard({ job, onClick, compact = false }: JobCardProps) {
         <div className="flex items-start gap-3">
           {/* Company logo */}
           {job.companyLogoUrl ? (
-            <img
+            <Image
               src={job.companyLogoUrl}
               alt={job.company}
+              width={40}
+              height={40}
               className="h-10 w-10 rounded-lg object-contain bg-muted"
+              unoptimized
             />
           ) : (
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
@@ -99,6 +119,17 @@ export function JobCard({ job, onClick, compact = false }: JobCardProps) {
         </div>
 
         <CardAction>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                onClick={handlePrepareCoverLetter}
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium h-8 w-8 p-0 hover:bg-accent hover:text-accent-foreground cursor-pointer"
+              >
+                <PenLine className="h-4 w-4" />
+              </TooltipTrigger>
+              <TooltipContent>Prepare cover letter</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Button
             variant="ghost"
             size="sm"
@@ -107,7 +138,7 @@ export function JobCard({ job, onClick, compact = false }: JobCardProps) {
             disabled={isSaving}
           >
             {saved ? (
-              <BookmarkCheck className="h-4 w-4 text-primary" />
+              <Bookmark className="h-4 w-4 fill-current text-primary" />
             ) : (
               <Bookmark className="h-4 w-4" />
             )}
@@ -167,12 +198,26 @@ export function JobCard({ job, onClick, compact = false }: JobCardProps) {
             <span>{sourceConfig.label}</span>
           </div>
 
-          {job.postedAt && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {formatDistanceToNow(new Date(job.postedAt), { addSuffix: true })}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {compatibilityScore !== undefined && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger className="cursor-default">
+                    <CompatibilityBadge score={compatibilityScore} size="sm" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {compatibilityScore >= 80 ? 'Excellent match' : compatibilityScore >= 60 ? 'Good match' : compatibilityScore >= 40 ? 'Fair match' : 'Low match'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {job.postedAt && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {formatDistanceToNow(new Date(job.postedAt), { addSuffix: true })}
+              </span>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

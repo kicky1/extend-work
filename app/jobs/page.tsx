@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Sparkles, Search, Loader2, AlertCircle, Crown, SlidersHorizontal, DollarSign, X, Bookmark, Home, Briefcase, ArrowUpDown, FileWarning } from 'lucide-react'
+import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxEmpty } from '@/components/ui/combobox'
+import { Sparkles, Search, Loader2, AlertCircle, Crown, SlidersHorizontal, DollarSign, X, Bookmark, Home, Briefcase, ArrowUpDown, FileWarning, MapPin } from 'lucide-react'
 import Link from 'next/link'
 
 // Check if CV has minimum required data for generating recommendations
@@ -73,6 +74,7 @@ export default function JobsPage() {
   } = useJobStore()
 
   const [searchTerm, setSearchTerm] = useState('')
+  const [locationFilter, setLocationFilter] = useState('')
   const [minScore, setMinScore] = useState(0)
   const [hasSalary, setHasSalary] = useState(false)
   const [remoteOnly, setRemoteOnly] = useState(false)
@@ -131,10 +133,23 @@ export default function JobsPage() {
     hasSalary,
     remoteOnly,
     employmentType !== 'any',
+    locationFilter.length > 0,
   ].filter(Boolean).length
 
   // Get current sort options based on view mode
   const currentSortOptions = viewMode === 'recommendations' ? sortOptions : savedSortOptions
+
+  // Unique locations from current job list for combobox
+  const uniqueLocations = useMemo(() => {
+    const baseJobs = viewMode === 'recommendations'
+      ? recommendations
+      : savedJobs.filter(s => s.jobListing).map(s => s.jobListing!)
+    const locations = new Set<string>()
+    for (const job of baseJobs) {
+      if (job.location) locations.add(job.location)
+    }
+    return Array.from(locations).sort((a, b) => a.localeCompare(b))
+  }, [recommendations, savedJobs, viewMode])
 
   // Filter and sort jobs based on view mode
   const filteredJobs = useMemo(() => {
@@ -146,6 +161,10 @@ export default function JobsPage() {
           .map(saved => saved.jobListing as ScoredJob)
 
     let result = baseJobs.filter((job) => {
+      // Filter by location
+      if (locationFilter && !job.location?.toLowerCase().includes(locationFilter.toLowerCase())) {
+        return false
+      }
       // Filter by minimum score (only for recommendations)
       if (viewMode === 'recommendations' && minScore > 0 && (job.compatibilityScore ?? 0) < minScore) {
         return false
@@ -191,7 +210,7 @@ export default function JobsPage() {
     })
 
     return result
-  }, [recommendations, savedJobs, viewMode, minScore, hasSalary, remoteOnly, employmentType, searchTerm, sortBy])
+  }, [recommendations, savedJobs, viewMode, minScore, hasSalary, remoteOnly, employmentType, locationFilter, searchTerm, sortBy])
 
   // Paginate filtered results
   const totalPages = Math.ceil(filteredJobs.length / jobsPerPage)
@@ -368,6 +387,7 @@ export default function JobsPage() {
           <JobCard
             key={job.id}
             job={job}
+            compatibilityScore={(job as ScoredJob).compatibilityScore}
             onClick={() => window.open(job.sourceUrl, '_blank')}
           />
         ))}
@@ -406,7 +426,7 @@ export default function JobsPage() {
 
       {/* Search and sort row */}
       <div className="flex gap-3">
-        <div className="relative flex-1">
+        <div className="relative flex-1 max-w-[280px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#5a6a6a]" />
           <Input
             type="text"
@@ -419,18 +439,6 @@ export default function JobsPage() {
             className="pl-10 bg-card"
           />
         </div>
-        <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
-          <SelectTrigger className="w-[150px] bg-card">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {currentSortOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Main content with sidebar */}
@@ -476,6 +484,7 @@ export default function JobsPage() {
                       setHasSalary(false)
                       setRemoteOnly(false)
                       setEmploymentType('any')
+                      setLocationFilter('')
                       setCurrentPage(1)
                     }}
                     className="h-6 px-2 text-xs"
@@ -499,7 +508,7 @@ export default function JobsPage() {
                       setCurrentPage(1)
                     }}
                     max={100}
-                    step={5}
+                    step={1}
                     className="w-full"
                   />
                   <p className="text-xs text-[#5a6a6a]">
@@ -550,13 +559,41 @@ export default function JobsPage() {
                 </div>
               </div>
 
+              {/* Location */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5" />
+                  Location
+                </label>
+                <Combobox
+                  value={locationFilter}
+                  onValueChange={(val) => {
+                    setLocationFilter(val ?? '')
+                    setCurrentPage(1)
+                  }}
+                >
+                  <ComboboxInput placeholder="Filter by location..." showClear className="w-full" />
+                  <ComboboxContent>
+                    <ComboboxList>
+                      {uniqueLocations.map((loc) => (
+                        <ComboboxItem key={loc} value={loc}>
+                          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                          {loc}
+                        </ComboboxItem>
+                      ))}
+                    </ComboboxList>
+                    <ComboboxEmpty>No locations found</ComboboxEmpty>
+                  </ComboboxContent>
+                </Combobox>
+              </div>
+
               {/* Employment type */}
               <div className="space-y-3">
                 <label className="text-sm font-medium flex items-center gap-1.5">
                   <Briefcase className="h-3.5 w-3.5" />
                   Job type
                 </label>
-                <Select value={employmentType} onValueChange={(v) => { setEmploymentType(v); setCurrentPage(1) }}>
+                <Select value={employmentType} onValueChange={(v) => { setEmploymentType(v ?? 'any'); setCurrentPage(1) }}>
                   <SelectTrigger className="w-full bg-card">
                     <SelectValue placeholder="All">
                       {employmentTypeOptions.find(o => o.value === employmentType)?.label}
@@ -615,7 +652,7 @@ export default function JobsPage() {
                       setCurrentPage(1)
                     }}
                     max={100}
-                    step={5}
+                    step={1}
                   />
                 </div>
               )}
@@ -643,8 +680,32 @@ export default function JobsPage() {
               </div>
 
               <div className="space-y-2">
+                <label className="text-sm font-medium">Location</label>
+                <Combobox
+                  value={locationFilter}
+                  onValueChange={(val) => {
+                    setLocationFilter(val ?? '')
+                    setCurrentPage(1)
+                  }}
+                >
+                  <ComboboxInput placeholder="Filter by location..." showClear className="w-full" />
+                  <ComboboxContent>
+                    <ComboboxList>
+                      {uniqueLocations.map((loc) => (
+                        <ComboboxItem key={loc} value={loc}>
+                          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                          {loc}
+                        </ComboboxItem>
+                      ))}
+                    </ComboboxList>
+                    <ComboboxEmpty>No locations found</ComboboxEmpty>
+                  </ComboboxContent>
+                </Combobox>
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-sm font-medium">Job type</label>
-                <Select value={employmentType} onValueChange={(v) => { setEmploymentType(v); setCurrentPage(1) }}>
+                <Select value={employmentType} onValueChange={(v) => { setEmploymentType(v ?? 'any'); setCurrentPage(1) }}>
                   <SelectTrigger className="w-full bg-card">
                     <SelectValue placeholder="All">
                       {employmentTypeOptions.find(o => o.value === employmentType)?.label}

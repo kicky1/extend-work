@@ -647,7 +647,7 @@ const useJobStore = create<JobStore>((set, get) => ({
 
       const { data, error } = await supabase
         .from('job_preferences')
-        .select('*')
+        .select('id, user_id, target_roles, target_locations, remote_preference, min_salary, max_salary, salary_currency, required_skills, preferred_skills, experience_level, employment_types, email_alerts, alert_frequency, created_at, updated_at')
         .eq('user_id', user.id)
         .single()
 
