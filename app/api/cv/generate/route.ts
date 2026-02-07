@@ -66,9 +66,10 @@ export async function POST(req: NextRequest) {
     })
 
     return result.toTextStreamResponse()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('AI generation error:', error)
-    return new Response(error.message || 'Failed to generate content', {
+    const message = error instanceof Error ? error.message : 'Failed to generate content'
+    return new Response(message, {
       status: 500,
     })
   }

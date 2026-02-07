@@ -5,6 +5,7 @@ import { generateDedupHash, filterNewJobs } from '@/lib/services/job-batch/dedup
 import { jobListingFromRow } from '@/lib/types/job'
 import type { JobSearchFilters } from '@/lib/types/job'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { sanitizePostgrestValue } from '@/lib/utils/postgrest-sanitize'
 
 const PAGE_SIZE = 20
 
@@ -18,7 +19,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { filters, page = 1 } = body as { filters: JobSearchFilters; page: number }
+    const { filters, page = 1, cursor } = body as {
+      filters: JobSearchFilters
+      page: number
+      cursor?: { postedAt: string; id: string }
+    }
 
     // Build DB query
     let query = supabase
@@ -26,10 +31,12 @@ export async function POST(request: NextRequest) {
       .select('*', { count: 'exact' })
 
     if (filters.query) {
-      query = query.or(`title.ilike.%${filters.query}%,company.ilike.%${filters.query}%`)
+      const q = sanitizePostgrestValue(filters.query)
+      query = query.or(`title.ilike.%${q}%,company.ilike.%${q}%`)
     }
     if (filters.location) {
-      query = query.ilike('location', `%${filters.location}%`)
+      const loc = sanitizePostgrestValue(filters.location)
+      query = query.ilike('location', `%${loc}%`)
     }
     if (filters.remoteType && filters.remoteType !== 'any') {
       query = query.eq('remote_type', filters.remoteType)
@@ -68,10 +75,16 @@ export async function POST(request: NextRequest) {
       query = query.not('salary_min', 'is', null)
     }
 
-    const offset = (page - 1) * PAGE_SIZE
-    query = query
-      .order('posted_at', { ascending: false, nullsFirst: false })
-      .range(offset, offset + PAGE_SIZE - 1)
+    // Cursor-based pagination (preferred) with OFFSET fallback
+    query = query.order('posted_at', { ascending: false, nullsFirst: false })
+    if (cursor) {
+      // Keyset pagination: fetch rows older than cursor
+      query = query.or(`posted_at.lt.${cursor.postedAt},and(posted_at.eq.${cursor.postedAt},id.lt.${cursor.id})`)
+        .limit(PAGE_SIZE)
+    } else {
+      const offset = (page - 1) * PAGE_SIZE
+      query = query.range(offset, offset + PAGE_SIZE - 1)
+    }
 
     const { data: rows, error: dbError, count } = await query
 
@@ -147,12 +160,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Build next cursor from last result
+    const lastJob = jobs[jobs.length - 1]
+    const nextCursor = lastJob ? { postedAt: lastJob.postedAt, id: lastJob.id } : null
+
     return NextResponse.json({
       jobs,
       totalCount: Math.max(totalCount, jobs.length),
       page,
       pageSize: PAGE_SIZE,
-      hasMore: totalCount > offset + PAGE_SIZE,
+      hasMore: jobs.length === PAGE_SIZE,
+      nextCursor,
       cached: false,
     })
   } catch (error: any) {

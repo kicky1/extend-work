@@ -212,8 +212,8 @@ async function syncGmailThreads(
       continue
     }
 
-    // Upsert messages
-    for (const message of messages) {
+    // Batch upsert all messages for this thread
+    const messageRows = messages.map((message: any) => {
       const msgHeaders = message.payload?.headers || []
       const getMsgHeader = (name: string) =>
         msgHeaders.find((h: any) => h.name.toLowerCase() === name.toLowerCase())?.value
@@ -234,7 +234,6 @@ async function syncGmailThreads(
 
       extractBody(message.payload)
 
-      // Parse from/to addresses
       const fromAddr = parseEmailAddress(getMsgHeader('From') || '')
       const toAddrs = (getMsgHeader('To') || '').split(',').filter(Boolean).map(parseEmailAddress)
       const ccAddrs = (getMsgHeader('Cc') || '').split(',').filter(Boolean).map(parseEmailAddress)
@@ -243,33 +242,39 @@ async function syncGmailThreads(
       const msgIsSent = msgLabelIds.includes('SENT')
       const msgSubject = getMsgHeader('Subject')
 
-      // Encrypt message fields if encryption key is provided
       const msgEncrypted = encryptionKey
         ? encryptEmailFields({ subject: msgSubject, bodyText, bodyHtml }, encryptionKey)
         : { subjectEncrypted: null, bodyTextEncrypted: null, bodyHtmlEncrypted: null }
 
-      await supabase
+      return {
+        thread_id: threadData.id,
+        provider_message_id: message.id,
+        from_address: fromAddr,
+        to_addresses: toAddrs,
+        cc_addresses: ccAddrs,
+        bcc_addresses: [],
+        subject: encryptionKey ? null : msgSubject,
+        body_text: encryptionKey ? null : (bodyText || null),
+        body_html: encryptionKey ? null : (bodyHtml || null),
+        subject_encrypted: msgEncrypted.subjectEncrypted,
+        body_text_encrypted: msgEncrypted.bodyTextEncrypted,
+        body_html_encrypted: msgEncrypted.bodyHtmlEncrypted,
+        attachments: [],
+        is_draft: msgLabelIds.includes('DRAFT'),
+        is_sent: msgIsSent,
+        sent_at: msgIsSent ? new Date(parseInt(message.internalDate)).toISOString() : null,
+        received_at: !msgIsSent ? new Date(parseInt(message.internalDate)).toISOString() : null,
+        updated_at: new Date().toISOString(),
+      }
+    })
+
+    if (messageRows.length > 0) {
+      const { error: msgError } = await supabase
         .from('email_messages')
-        .upsert({
-          thread_id: threadData.id,
-          provider_message_id: message.id,
-          from_address: fromAddr,
-          to_addresses: toAddrs,
-          cc_addresses: ccAddrs,
-          bcc_addresses: [],
-          subject: encryptionKey ? null : msgSubject,
-          body_text: encryptionKey ? null : (bodyText || null),
-          body_html: encryptionKey ? null : (bodyHtml || null),
-          subject_encrypted: msgEncrypted.subjectEncrypted,
-          body_text_encrypted: msgEncrypted.bodyTextEncrypted,
-          body_html_encrypted: msgEncrypted.bodyHtmlEncrypted,
-          attachments: [],
-          is_draft: msgLabelIds.includes('DRAFT'),
-          is_sent: msgIsSent,
-          sent_at: msgIsSent ? new Date(parseInt(message.internalDate)).toISOString() : null,
-          received_at: !msgIsSent ? new Date(parseInt(message.internalDate)).toISOString() : null,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'thread_id,provider_message_id' })
+        .upsert(messageRows, { onConflict: 'thread_id,provider_message_id' })
+      if (msgError) {
+        console.error('[Sync] Message batch upsert error:', msgError)
+      }
     }
   }
 
@@ -391,8 +396,8 @@ async function syncOutlookThreads(
       continue
     }
 
-    // Upsert messages
-    for (const message of convMessages) {
+    // Batch upsert all messages for this thread
+    const messageRows = convMessages.map((message: any) => {
       const fromAddr: EmailParticipant = message.from?.emailAddress
         ? { name: message.from.emailAddress.name, email: message.from.emailAddress.address }
         : { email: 'unknown' }
@@ -412,33 +417,39 @@ async function syncOutlookThreads(
       const bodyText = message.body?.contentType === 'text' ? message.body.content : null
       const bodyHtml = message.body?.contentType === 'html' ? message.body.content : null
 
-      // Encrypt message fields if encryption key is provided
       const msgEncrypted = encryptionKey
         ? encryptEmailFields({ subject: msgSubject, bodyText, bodyHtml }, encryptionKey)
         : { subjectEncrypted: null, bodyTextEncrypted: null, bodyHtmlEncrypted: null }
 
-      await supabase
+      return {
+        thread_id: threadData.id,
+        provider_message_id: message.id,
+        from_address: fromAddr,
+        to_addresses: toAddrs,
+        cc_addresses: ccAddrs,
+        bcc_addresses: [],
+        subject: encryptionKey ? null : msgSubject,
+        body_text: encryptionKey ? null : bodyText,
+        body_html: encryptionKey ? null : bodyHtml,
+        subject_encrypted: msgEncrypted.subjectEncrypted,
+        body_text_encrypted: msgEncrypted.bodyTextEncrypted,
+        body_html_encrypted: msgEncrypted.bodyHtmlEncrypted,
+        attachments: [],
+        is_draft: message.isDraft,
+        is_sent: msgIsSent,
+        sent_at: message.sentDateTime,
+        received_at: message.receivedDateTime,
+        updated_at: new Date().toISOString(),
+      }
+    })
+
+    if (messageRows.length > 0) {
+      const { error: msgError } = await supabase
         .from('email_messages')
-        .upsert({
-          thread_id: threadData.id,
-          provider_message_id: message.id,
-          from_address: fromAddr,
-          to_addresses: toAddrs,
-          cc_addresses: ccAddrs,
-          bcc_addresses: [],
-          subject: encryptionKey ? null : msgSubject,
-          body_text: encryptionKey ? null : bodyText,
-          body_html: encryptionKey ? null : bodyHtml,
-          subject_encrypted: msgEncrypted.subjectEncrypted,
-          body_text_encrypted: msgEncrypted.bodyTextEncrypted,
-          body_html_encrypted: msgEncrypted.bodyHtmlEncrypted,
-          attachments: [],
-          is_draft: message.isDraft,
-          is_sent: msgIsSent,
-          sent_at: message.sentDateTime,
-          received_at: message.receivedDateTime,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'thread_id,provider_message_id' })
+        .upsert(messageRows, { onConflict: 'thread_id,provider_message_id' })
+      if (msgError) {
+        console.error('[Sync] Message batch upsert error:', msgError)
+      }
     }
   }
 
@@ -462,10 +473,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Account ID required' }, { status: 400 })
     }
 
-    // Get email account
+    // Get email account — only select columns needed for sync
     const { data: account, error: accountError } = await supabase
       .from('user_email_accounts')
-      .select('*')
+      .select('id,provider,email,access_token,refresh_token,token_expires_at,sync_label')
       .eq('id', accountId)
       .eq('user_id', user.id)
       .single()

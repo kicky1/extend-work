@@ -480,7 +480,7 @@ function createCVTools(cvData: CVData) {
           corners: z.string().optional(),
           background: z.string().optional(),
           border: z.string().optional(),
-          fullHeight: z.boolean().optional(),
+          fullBleed: z.boolean().optional(),
           width: z.string().optional(),
         }).optional(),
         dateFormat: z.string().optional(),

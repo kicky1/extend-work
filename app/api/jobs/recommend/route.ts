@@ -10,6 +10,7 @@ import { jobListingFromRow } from '@/lib/types/job'
 import type { CVData } from '@/lib/types/cv'
 import type { RemotePreference, EmploymentType, JobListing } from '@/lib/types/job'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { sanitizePostgrestValue } from '@/lib/utils/postgrest-sanitize'
 import crypto from 'crypto'
 
 const anthropic = createAnthropic({
@@ -200,7 +201,7 @@ export async function POST(request: NextRequest) {
         // Load user preferences
         const { data: prefsRow } = await supabaseAdmin
           .from('job_preferences')
-          .select('*')
+          .select('id, user_id, target_roles, target_locations, remote_preference, min_salary, max_salary, salary_currency, required_skills, preferred_skills, experience_level, employment_types, email_alerts, alert_frequency, created_at, updated_at')
           .eq('user_id', user.id)
           .single()
 
@@ -216,7 +217,7 @@ export async function POST(request: NextRequest) {
 
         const { data: cachedResult } = await supabaseAdmin
           .from('job_recommendation_cache')
-          .select('*')
+          .select('recommendations, search_terms')
           .eq('user_id', user.id)
           .eq('cv_hash', cvHash)
           .gte('created_at', new Date(Date.now() - CACHE_TTL_HOURS * 60 * 60 * 1000).toISOString())
@@ -472,11 +473,12 @@ async function findMatchingJobsWithProgress(
 
   // Query database
   const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+  const sanitizedTerms = finalSearchTerms.map(t => sanitizePostgrestValue(t)).filter(Boolean)
   const { data: dbJobs } = await supabase
     .from('job_listings')
     .select('*')
     .or(
-      finalSearchTerms
+      sanitizedTerms
         .map(term => `title.ilike.%${term}%,company.ilike.%${term}%,description.ilike.%${term}%`)
         .join(',')
     )
@@ -697,7 +699,7 @@ async function findMatchingJobsWithProgress(
 
         console.log(`[Recommend] Inserted ${allDedupHashes.length} new jobs`)
 
-        const FETCH_BATCH_SIZE = 50
+        const FETCH_BATCH_SIZE = 250
         for (let i = 0; i < allDedupHashes.length; i += FETCH_BATCH_SIZE) {
           const hashBatch = allDedupHashes.slice(i, i + FETCH_BATCH_SIZE)
           const { data: insertedJobs, error: fetchError } = await supabase
@@ -777,11 +779,12 @@ async function findMatchingJobs(
   // Note: Removed .overlaps('skills', ...) filter - jobs often don't have skills populated
   // Skills matching is handled in scoring instead
   const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+  const sanitizedTerms = finalSearchTerms.map(t => sanitizePostgrestValue(t)).filter(Boolean)
   const { data: dbJobs } = await supabase
     .from('job_listings')
     .select('*')
     .or(
-      finalSearchTerms
+      sanitizedTerms
         .map(term => `title.ilike.%${term}%,company.ilike.%${term}%,description.ilike.%${term}%`)
         .join(',')
     )
@@ -977,8 +980,7 @@ async function findMatchingJobs(
         console.log(`[Recommend] Inserted ${allDedupHashes.length} new jobs (attempted: ${insertRows.length})`)
 
         // Fetch the inserted jobs with their database-generated IDs
-        // Use smaller batch for fetch to avoid URL/header overflow (hashes are long strings)
-        const FETCH_BATCH_SIZE = 50
+        const FETCH_BATCH_SIZE = 250
         console.log(`[Recommend] Fetching ${allDedupHashes.length} jobs by dedup_hash`)
         for (let i = 0; i < allDedupHashes.length; i += FETCH_BATCH_SIZE) {
           const hashBatch = allDedupHashes.slice(i, i + FETCH_BATCH_SIZE)

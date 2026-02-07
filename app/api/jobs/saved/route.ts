@@ -110,8 +110,8 @@ export async function POST(request: NextRequest) {
     }
     const actualJobId = jobData.id
 
-    // Save the bookmark using admin client (with user_id from authenticated user)
-    const { data, error } = await supabaseAdmin
+    // Save the bookmark using authenticated client (RLS enforces user_id match)
+    const { data, error } = await supabase
       .from('saved_jobs')
       .upsert({
         user_id: user.id,

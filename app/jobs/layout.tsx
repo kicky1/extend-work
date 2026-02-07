@@ -1,5 +1,11 @@
+import type { Metadata } from 'next'
 import { ReactNode } from 'react'
 import AppNavbar from '@/components/layout/app-navbar'
+
+export const metadata: Metadata = {
+  title: 'Jobs',
+  robots: { index: false, follow: false },
+}
 
 interface JobsLayoutProps {
   children: ReactNode

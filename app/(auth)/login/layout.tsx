@@ -1,15 +1,14 @@
 import type { Metadata } from 'next'
-import { SettingsShell } from './settings-shell'
 
 export const metadata: Metadata = {
-  title: 'Settings',
+  title: 'Sign In',
   robots: { index: false, follow: false },
 }
 
-export default function SettingsLayout({
+export default function LoginLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return <SettingsShell>{children}</SettingsShell>
+  return children
 }

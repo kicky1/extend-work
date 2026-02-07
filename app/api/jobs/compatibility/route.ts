@@ -1,3 +1,4 @@
+import { after } from 'next/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
@@ -84,11 +85,13 @@ ${cvSummary}
 Provide a detailed compatibility analysis.`,
     })
 
-    // Record AI usage
-    await recordAIUsage(
-      user.id,
-      result.usage?.inputTokens ?? 0,
-      result.usage?.outputTokens ?? 0
+    // Record AI usage (non-blocking)
+    after(
+      recordAIUsage(
+        user.id,
+        result.usage?.inputTokens ?? 0,
+        result.usage?.outputTokens ?? 0
+      )
     )
 
     const object = result.object
@@ -104,10 +107,10 @@ Provide a detailed compatibility analysis.`,
     }
 
     return NextResponse.json({ analysis })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Compatibility API] Error:', error)
     return NextResponse.json(
-      { error: 'Analysis failed', message: error.message },
+      { error: 'Analysis failed', message: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

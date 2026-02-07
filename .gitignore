@@ -42,3 +42,5 @@ next-env.d.ts
 
 # scraper output
 /output/
+supabase/.temp/
+test-jsearch-auth.js

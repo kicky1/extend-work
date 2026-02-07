@@ -1,5 +1,6 @@
 import { generateText, tool, stepCountIs } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
+import { after } from 'next/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { nanoid } from 'nanoid'
@@ -98,11 +99,13 @@ Please use the appropriate tool(s) to fix this issue. Be specific and targeted i
       temperature: 0.3,
     })
 
-    // Record AI usage
-    await recordAIUsage(
-      user.id,
-      result.usage?.inputTokens ?? 0,
-      result.usage?.outputTokens ?? 0
+    // Record AI usage (non-blocking)
+    after(
+      recordAIUsage(
+        user.id,
+        result.usage?.inputTokens ?? 0,
+        result.usage?.outputTokens ?? 0
+      )
     )
 
     // Extract tool results from steps (execute functions were called server-side)

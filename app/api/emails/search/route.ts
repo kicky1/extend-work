@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     // Build search query
     let dbQuery = supabase
       .from('email_threads')
-      .select('*')
+      .select('id, user_id, email_account_id, provider_thread_id, subject, snippet, participants, last_message_at, is_read, is_starred, is_archived, is_draft, is_sent, labels, message_count, created_at, updated_at')
       .eq('user_id', user.id)
 
     if (accountId) {

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useSubscription } from '@/lib/hooks/use-subscription';
-import { CreditCard, LogOut, User, Sparkles, FileText, Briefcase, Mail, CalendarDays, Menu, X } from 'lucide-react';
+import { CreditCard, LogOut, User, Sparkles, FileText, Briefcase, Mail, CalendarDays, PenLine, Menu, X } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
@@ -78,6 +78,7 @@ export default function AppNavbar() {
 
   const navLinks = [
     { href: '/cv-creator', label: 'CV Creator', icon: FileText, exact: true },
+    { href: '/cover-letter', label: 'Cover Letter', icon: PenLine },
     { href: '/jobs', label: 'Jobs', icon: Briefcase },
     { href: '/emails', label: 'Emails', icon: Mail },
     { href: '/calendar', label: 'Calendar', icon: CalendarDays },

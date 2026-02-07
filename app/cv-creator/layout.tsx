@@ -1,15 +1,14 @@
 import type { Metadata } from 'next'
-import { SettingsShell } from './settings-shell'
 
 export const metadata: Metadata = {
-  title: 'Settings',
+  title: 'CV Creator',
   robots: { index: false, follow: false },
 }
 
-export default function SettingsLayout({
+export default function CVCreatorLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return <SettingsShell>{children}</SettingsShell>
+  return children
 }

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     const { data: accounts, error } = await supabase
       .from('user_email_accounts')
-      .select('*')
+      .select('id, provider, email, is_active, is_default, sync_label, sync_page_token, created_at, updated_at')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .order('created_at', { ascending: false })

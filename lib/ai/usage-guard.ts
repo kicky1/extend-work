@@ -82,34 +82,18 @@ export async function recordAIUsage(
     p_output_tokens: outputTokens,
   });
 
-  // If RPC doesn't exist, fall back to manual upsert
+  // If RPC doesn't exist, fall back to atomic upsert
   if (error) {
-    // Try to update existing record
-    const { data: existing } = await supabase
+    console.error('[Usage Guard] RPC failed, falling back to upsert:', error.message);
+    await supabase
       .from('ai_usage')
-      .select('id, request_count, total_input_tokens, total_output_tokens')
-      .eq('user_id', userId)
-      .eq('period_start', periodStart)
-      .single();
-
-    if (existing) {
-      await supabase
-        .from('ai_usage')
-        .update({
-          request_count: existing.request_count + 1,
-          total_input_tokens: existing.total_input_tokens + inputTokens,
-          total_output_tokens: existing.total_output_tokens + outputTokens,
-        })
-        .eq('id', existing.id);
-    } else {
-      await supabase.from('ai_usage').insert({
+      .upsert({
         user_id: userId,
         period_start: periodStart,
         request_count: 1,
         total_input_tokens: inputTokens,
         total_output_tokens: outputTokens,
-      });
-    }
+      }, { onConflict: 'user_id,period_start' });
   }
 }
 
