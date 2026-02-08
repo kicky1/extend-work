@@ -1,7 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
+import { Play, ArrowRight } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { VideoPlayer } from '@/components/landing/video-player'
 
 const easeOut = [0.22, 1, 0.36, 1] as const
 
@@ -26,18 +31,21 @@ export function MarketingHero({
   subtitle,
   ctaText = 'Get started free',
   ctaHref = '/signup',
+  videoSrc,
 }: {
   badge: string
   title: string
   subtitle: string
   ctaText?: string
   ctaHref?: string
+  videoSrc?: string
 }) {
   const shouldReduceMotion = useReducedMotion()
+  const [videoOpen, setVideoOpen] = useState(false)
 
   return (
     <section className="relative px-6 pt-16 pb-20">
-      <div className="max-w-4xl mx-auto text-center">
+      <div className={`${videoSrc !== undefined ? 'max-w-5xl' : 'max-w-4xl'} mx-auto text-center`}>
         <motion.div
           variants={staggerContainer}
           initial="initial"
@@ -63,6 +71,55 @@ export function MarketingHero({
           >
             {subtitle}
           </motion.p>
+
+          {videoSrc !== undefined && (
+            <motion.div variants={fadeUp} className="mb-10">
+              {videoSrc ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setVideoOpen(true)}
+                    className="relative mx-auto block w-full max-w-3xl rounded-2xl overflow-hidden shadow-xl border border-[#e8e4df] cursor-pointer group"
+                  >
+                    <div className="relative aspect-video bg-[#1a2a2a]">
+                      <video
+                        src={videoSrc}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        className="w-full h-full object-contain"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
+                        <div className="w-16 h-16 rounded-full bg-white/90 group-hover:bg-white flex items-center justify-center shadow-lg transition-colors">
+                          <Play className="w-7 h-7 text-[#1a2a2a] ml-1" fill="currentColor" />
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+
+                  <Dialog open={videoOpen} onOpenChange={setVideoOpen}>
+                    <DialogContent className="max-w-4xl p-0 bg-[#1a2a2a] border-none overflow-hidden">
+                      {videoOpen && (
+                        <VideoPlayer src={videoSrc} autoPlay loop={false} />
+                      )}
+                    </DialogContent>
+                  </Dialog>
+                </>
+              ) : (
+                <div className="relative mx-auto w-full max-w-3xl rounded-2xl overflow-hidden shadow-xl border border-[#e8e4df]">
+                  <div className="relative aspect-video bg-[#1a2a2a] flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
+                        <Play className="w-7 h-7 text-white/30 ml-1" fill="currentColor" />
+                      </div>
+                      <span className="text-sm text-white/30 font-medium">Video coming soon</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
 
           <motion.div variants={fadeUp}>
             <Link
@@ -219,6 +276,61 @@ export function MarketingCTA({
           </div>
         </div>
       </motion.div>
+    </section>
+  )
+}
+
+/* ---------- RelatedToolsGrid ---------- */
+export function RelatedToolsGrid({
+  title = 'Explore related tools',
+  tools,
+}: {
+  title?: string
+  tools: { title: string; description: string; href: string; icon: LucideIcon }[]
+}) {
+  const shouldReduceMotion = useReducedMotion()
+
+  return (
+    <section className="relative px-6 py-20 bg-white">
+      <div className="max-w-4xl mx-auto">
+        <motion.div
+          initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.25, ease: easeOut }}
+          className="text-center mb-12"
+        >
+          <h2 className="text-3xl sm:text-4xl font-bold text-[#1a2a2a]">{title}</h2>
+        </motion.div>
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          {tools.map((tool, i) => (
+            <motion.div
+              key={tool.href}
+              initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.25, ease: easeOut, delay: i * 0.06 }}
+            >
+              <Link
+                href={tool.href}
+                className="flex items-start gap-4 p-5 rounded-xl border border-[#e8e4df] hover:border-[#1a4a4a]/30 hover:bg-[#1a4a4a]/[0.02] transition-colors group"
+              >
+                <div className="w-10 h-10 rounded-lg bg-[#1a4a4a]/10 flex items-center justify-center shrink-0 group-hover:bg-[#1a4a4a]/15 transition-colors">
+                  <tool.icon className="w-5 h-5 text-[#1a4a4a]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold text-[#1a2a2a]">{tool.title}</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-[#1a4a4a]/40 group-hover:text-[#1a4a4a] group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                  <p className="text-xs text-[#5a6a6a] leading-relaxed">{tool.description}</p>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </div>
     </section>
   )
 }

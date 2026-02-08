@@ -2,14 +2,16 @@
 
 import { MarketingHero, FeatureSection, HowItWorksSection, MarketingCTA } from '@/components/seo/marketing-page-sections'
 import { CoverLetterFeatureMockup, CoverLetterAIFeatureMockup } from '@/components/seo/feature-mockups'
+import { JobToCoverLetterFeatureMockup, CVToCoverLetterFeatureMockup } from '@/components/seo/mockups'
 
 export function CoverLetterGeneratorContent() {
   return (
     <>
       <MarketingHero
         badge="Cover Letter Generator"
-        title="Write the perfect cover letter — by hand or with AI"
-        subtitle="A rich text editor with live preview and PDF/DOCX export, plus an AI agent that drafts, rewrites, and tailors your cover letter using your CV and the job you're applying to."
+        title="The perfect cover letter with AI"
+        subtitle="Rich text editor with live preview and export, plus an AI agent that writes and tailors your cover letter."
+        videoSrc="https://utfs.io/f/zGi357RvYr0HHCFqElelwHy9hJQsDUZ1ciTK7f4NGAW8bPpF"
       />
 
       <section className="px-6 py-16 bg-white">
@@ -48,6 +50,7 @@ export function CoverLetterGeneratorContent() {
               'Matches your experience and skills to the specific role',
               'Cover letter is ready to review, edit, and export in seconds',
             ]}
+            mockup={<JobToCoverLetterFeatureMockup />}
           />
 
           <FeatureSection
@@ -56,9 +59,8 @@ export function CoverLetterGeneratorContent() {
             bullets={[
               'Automatically pulls data from your CV — experience, skills, education, and summary',
               'References specific achievements and metrics from your resume',
-              'Ensures consistency between your cover letter and CV content',
-              'Updates when your CV changes — regenerate any time with fresh data',
-            ]}
+              'Ensures consistency between your cover letter and CV content'            ]}
+            mockup={<CVToCoverLetterFeatureMockup />}
             reverse
           />
         </div>

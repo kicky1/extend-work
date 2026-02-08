@@ -2,14 +2,16 @@
 
 import { MarketingHero, FeatureSection, HowItWorksSection, MarketingCTA } from '@/components/seo/marketing-page-sections'
 import { CalendarFeatureMockup, InterviewScheduleFeatureMockup, CalendarAIAssistantFeatureMockup } from '@/components/seo/feature-mockups'
+import { ApplicationTimelineFeatureMockup } from '@/components/seo/mockups'
 
 export function InterviewTrackerContent() {
   return (
     <>
       <MarketingHero
         badge="Interview Tracker"
-        title="Schedule, track, and manage every interview — with AI"
-        subtitle="A full calendar with Google Calendar sync, interview scheduling, outcome tracking, application timelines, and an AI assistant that manages it all through conversation."
+        title="Manage every interview with AI"
+        subtitle="Calendar with Google Calendar sync, interview scheduling, outcome tracking, and an AI assistant."
+        videoSrc=""
       />
 
       <section className="px-6 py-16 bg-white">
@@ -48,6 +50,7 @@ export function InterviewTrackerContent() {
               'Mark applications as accepted, rejected, or withdrawn',
               'Track multiple application pipelines simultaneously',
             ]}
+            mockup={<ApplicationTimelineFeatureMockup />}
           />
 
           <FeatureSection

@@ -5,7 +5,7 @@ import { ResumeBuilderContent } from './content'
 export const metadata: Metadata = generateMarketingPageMetadata(
   'resume-builder',
   'Free AI Resume Builder — Create Professional Resumes | Extend Career',
-  'Build a professional, ATS-optimized resume in minutes with our free AI resume builder. 30+ templates, real-time preview, and one-click PDF export.',
+  'Build a professional, ATS-optimized resume in minutes with our free AI resume builder. 100+ templates, real-time preview, and one-click PDF export.',
 )
 
 export default function ResumeBuilderPage() {
@@ -20,7 +20,7 @@ export default function ResumeBuilderPage() {
             name: 'Extend Career Resume Builder',
             applicationCategory: 'BusinessApplication',
             operatingSystem: 'Web',
-            description: 'AI-powered resume builder with 30+ professional templates and real-time preview.',
+            description: 'AI-powered resume builder with 100+ professional templates and real-time preview.',
             offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
           }),
         }}

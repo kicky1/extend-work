@@ -2,14 +2,16 @@
 
 import { MarketingHero, FeatureSection, HowItWorksSection, MarketingCTA } from '@/components/seo/marketing-page-sections'
 import { EmailsFeatureMockup, EmailComposeFeatureMockup } from '@/components/seo/feature-mockups'
+import { EmailSearchOrganizeFeatureMockup } from '@/components/seo/mockups'
 
 export function EmailManagementContent() {
   return (
     <>
       <MarketingHero
         badge="Email Management"
-        title="Your job search inbox — all in one place"
-        subtitle="Sync Gmail or Outlook and manage every email without leaving the platform. Read, compose, reply, search, star, use templates — a full email system built into your job search toolkit."
+        title="Your job search inbox"
+        subtitle="Sync Gmail or Outlook and manage every email in one place — search, star, compose, and use templates."
+        videoSrc=""
       />
 
       <section className="px-6 py-16 bg-white">
@@ -35,6 +37,7 @@ export function EmailManagementContent() {
               'Browse inbox, sent, and starred folders',
               'Threaded conversation view for each contact',
             ]}
+            mockup={<EmailSearchOrganizeFeatureMockup />}
             reverse
           />
 
@@ -50,17 +53,6 @@ export function EmailManagementContent() {
             mockup={<EmailComposeFeatureMockup />}
           />
 
-          <FeatureSection
-            title="Everything in one place"
-            description="Stop switching between your email, job board, calendar, and resume editor. With email built into your job search toolkit, every conversation is right next to the jobs, CVs, and cover letters they relate to."
-            bullets={[
-              'Email lives alongside your CV, jobs, cover letters, and calendar',
-              'No context switching — read a recruiter email and update your CV in the same tab',
-              'Keep your entire job search workflow in a single platform',
-              'Works with your existing email — nothing to migrate',
-            ]}
-            reverse
-          />
         </div>
       </section>
 

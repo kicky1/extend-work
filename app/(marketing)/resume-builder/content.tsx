@@ -13,8 +13,9 @@ export function ResumeBuilderContent() {
     <>
       <MarketingHero
         badge="Resume Builder"
-        title="Build, evaluate, and perfect your resume with AI"
-        subtitle="A complete resume toolkit — intuitive editor with live preview, AI-powered scoring and auto-fix, 30+ customizable themes, and a conversational AI assistant that writes and improves your CV for you."
+        title="Build perfect resume with AI"
+        subtitle="An intuitive editor with live preview, AI scoring and auto-fix, 100+ themes, and an AI assistant that writes your CV for you."
+        videoSrc="https://utfs.io/f/zGi357RvYr0HyeC5gHS8RpFtCvxno3f6Hbi9YmNezT5hErw1"
       />
 
       <section className="px-6 py-16 bg-white">
@@ -48,7 +49,7 @@ export function ResumeBuilderContent() {
             title="Theme customizer"
             description="Go beyond templates — fine-tune every visual detail of your resume until it looks exactly the way you want."
             bullets={[
-              '30+ templates searchable by industry (tech, finance, healthcare, creative, etc.)',
+              '100+ templates searchable by industry (tech, finance, healthcare, creative, etc.)',
               'Full color control: primary, accent, text, and background with hex input',
               'Typography, layout (single/two-column, sidebar), spacing, dividers, bullet styles, page numbers',
               'Photo styling (shape, size, border, shadow), header layout, summary style, section styles',

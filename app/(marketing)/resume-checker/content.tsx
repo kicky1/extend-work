@@ -1,15 +1,39 @@
 'use client'
 
-import { MarketingHero, FeatureSection, HowItWorksSection, MarketingCTA } from '@/components/seo/marketing-page-sections'
+import { MarketingHero, FeatureSection, HowItWorksSection, MarketingCTA, RelatedToolsGrid } from '@/components/seo/marketing-page-sections'
 import { CVEvaluationFeatureMockup } from '@/components/seo/feature-mockups'
+import { AutoFixBeforeAfterFeatureMockup } from '@/components/seo/mockups'
+import { ScanSearch, KeyRound, Target, Wrench } from 'lucide-react'
+
+const relatedTools = [
+  {
+    title: 'ATS Resume Checker',
+    description: 'Check if your resume passes ATS scanners with a detailed compatibility score.',
+    href: '/ats-resume-checker',
+    icon: ScanSearch,
+  },
+  {
+    title: 'Resume Keyword Checker',
+    description: 'Analyze keyword density and find missing keywords that ATS systems look for.',
+    href: '/resume-keyword-checker',
+    icon: KeyRound,
+  },
+  {
+    title: 'Job Match Checker',
+    description: 'Score how well your resume matches a specific job description.',
+    href: '/resume-job-match-checker',
+    icon: Target,
+  }
+]
 
 export function ResumeCheckerContent() {
   return (
     <>
       <MarketingHero
         badge="Resume Checker"
-        title="Score your resume, fix every issue, and re-evaluate — in seconds"
-        subtitle="Get an AI-powered evaluation with an overall score, section-by-section breakdown, ATS keyword analysis, and one-click auto-fix for every issue it finds."
+        title="Score your resume and fix every issue in seconds"
+        subtitle="AI-powered evaluation with scoring, ATS keyword analysis, and one-click auto-fix for every issue."
+        videoSrc=""
       />
 
       <section className="px-6 py-16 bg-white">
@@ -22,48 +46,31 @@ export function ResumeCheckerContent() {
               'Section-by-section scoring for summary, experience, education, skills, and more',
               'Strengths highlighted per section so you know what\'s already working',
               'Issues flagged with severity levels: critical, warning, and suggestion',
+              'ATS compatibility score with keyword breakdown and density analysis',
             ]}
             mockup={<CVEvaluationFeatureMockup />}
           />
 
           <FeatureSection
-            title="ATS compatibility and keyword analysis"
-            description="Find out if your resume will pass ATS scanners before you apply. The checker analyzes keyword density, identifies found keywords, and suggests missing ones — with an optional job description input for targeted scoring."
-            bullets={[
-              'ATS compatibility score with detailed keyword breakdown',
-              'Found keywords extracted from your resume content',
-              'Suggested keywords missing from your resume that ATS systems look for',
-              'Optional job description input for job-specific match scoring',
-              'Keyword density analysis to avoid over-stuffing',
-            ]}
-            reverse
-          />
-
-          <FeatureSection
             title="One-click AI auto-fix with before/after preview"
-            description="Don\'t just see the problems — fix them instantly. Every issue comes with a one-click fix button that rewrites the affected content using AI. Preview the before and after, apply the change, and re-evaluate to watch your score climb."
+            description="Don't just see the problems — fix them instantly. Every issue comes with a one-click fix button that rewrites the affected content using AI. Preview the before and after, apply the change, and re-evaluate to watch your score climb."
             bullets={[
               'One-click AI fix button on every detected issue',
               'Before/after preview so you see exactly what changes before applying',
               'Re-evaluate after fixes to confirm your score improved',
-              'Fix all issues in a section at once or address them one by one',
+              'Paste a job description for targeted match scoring and keyword gap analysis',
               'AI rewrites preserve your voice while fixing the flagged problem',
             ]}
-          />
-
-          <FeatureSection
-            title="Job match scoring"
-            description="Paste a job description and get a dedicated match score that shows how well your resume aligns with the role. The checker identifies gaps in skills, experience, and keywords — and suggests targeted fixes to close them."
-            bullets={[
-              'Overall job match percentage based on requirements alignment',
-              'Missing skills and qualifications flagged against the job description',
-              'Keyword gap analysis specific to the target role',
-              'Targeted fix suggestions to improve your match score',
-            ]}
+            mockup={<AutoFixBeforeAfterFeatureMockup />}
             reverse
           />
         </div>
       </section>
+
+      <RelatedToolsGrid
+        title="Dive deeper into resume analysis"
+        tools={relatedTools}
+      />
 
       <HowItWorksSection
         steps={[
