@@ -390,11 +390,6 @@ export function InterviewDetailModal({
                 </Button>
               )}
 
-              <Button variant="outline" size="sm" onClick={() => downloadICS(interview)}>
-                <Download className="w-4 h-4 mr-1" />
-                Export to Calendar
-              </Button>
-
               <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                 <Edit className="w-4 h-4 mr-1" />
                 Edit
