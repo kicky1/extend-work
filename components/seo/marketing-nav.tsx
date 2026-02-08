@@ -2,19 +2,56 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, ChevronDown } from 'lucide-react'
-import { toolItems, resourceItems } from '@/lib/marketing-nav-data'
+import { moduleItems, aiToolGroups, resourceItems } from '@/lib/marketing-nav-data'
+import { createClient } from '@/lib/supabase/client'
 
 const easeOut = [0.22, 1, 0.36, 1] as const
+
+interface UserNav {
+  email: string
+  displayName: string | null
+  avatarUrl: string | null
+}
 
 export function MarketingNav({ variant }: { variant?: 'landing' }) {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [activeDropdown, setActiveDropdown] = useState<'tools' | 'resources' | null>(null)
-  const [mobileAccordion, setMobileAccordion] = useState<'tools' | 'resources' | null>(null)
+  const [activeDropdown, setActiveDropdown] = useState<'modules' | 'tools' | 'resources' | null>(null)
+  const [mobileAccordion, setMobileAccordion] = useState<'modules' | 'tools' | 'resources' | null>(null)
+  const [user, setUser] = useState<UserNav | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const navRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return
+      // Try to fetch profile for avatar
+      fetch('/api/user/profile')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((profile) => {
+          setUser({
+            email: data.user.email ?? '',
+            displayName: profile?.displayName ?? null,
+            avatarUrl: profile?.avatarUrl ?? null,
+          })
+        })
+        .catch(() => {
+          setUser({ email: data.user!.email ?? '', displayName: null, avatarUrl: null })
+        })
+    })
+  }, [])
+
+  const getInitials = () => {
+    if (user?.displayName) {
+      return user.displayName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+    }
+    if (user?.email) return user.email[0].toUpperCase()
+    return 'U'
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10)
@@ -29,7 +66,7 @@ export function MarketingNav({ variant }: { variant?: 'landing' }) {
     setMobileAccordion(null)
   }, [])
 
-  const openDropdown = (key: 'tools' | 'resources') => {
+  const openDropdown = (key: 'modules' | 'tools' | 'resources') => {
     if (closeTimer.current) clearTimeout(closeTimer.current)
     setActiveDropdown(key)
   }
@@ -67,12 +104,24 @@ export function MarketingNav({ variant }: { variant?: 'landing' }) {
 
           {/* Desktop nav links */}
           <div className="hidden lg:flex items-center gap-1">
-            <Link
-              href="/resume-builder"
-              className="text-sm font-medium text-[#3a4a4a] hover:text-[#1a2a2a] transition-colors px-3 py-2 rounded-md hover:bg-[#1a4a4a]/5"
+            {/* Modules dropdown */}
+            <div
+              className="relative"
+              onMouseEnter={() => openDropdown('modules')}
+              onMouseLeave={scheduleClose}
             >
-              Resume Builder
-            </Link>
+              <button
+                className={`flex items-center gap-1 text-sm font-medium px-3 py-2 rounded-md transition-colors ${
+                  activeDropdown === 'modules'
+                    ? 'text-[#1a2a2a] bg-[#1a4a4a]/5'
+                    : 'text-[#3a4a4a] hover:text-[#1a2a2a] hover:bg-[#1a4a4a]/5'
+                }`}
+                onClick={() => setActiveDropdown(activeDropdown === 'modules' ? null : 'modules')}
+              >
+                Modules
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${activeDropdown === 'modules' ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
 
             {/* AI Tools dropdown */}
             <div
@@ -122,18 +171,39 @@ export function MarketingNav({ variant }: { variant?: 'landing' }) {
 
           {/* Desktop right side */}
           <div className="hidden lg:flex items-center gap-3">
-            <Link
-              href="/login"
-              className="text-sm font-medium text-[#3a4a4a] hover:text-[#1a2a2a] transition-colors px-3 py-2"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/signup"
-              className="text-sm font-medium bg-[#1a4a4a] hover:bg-[#0d3535] text-white px-5 py-2 rounded-lg transition-colors"
-            >
-              Get started
-            </Link>
+            {user ? (
+              <Link href="/cv-creator" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                {user.avatarUrl ? (
+                  <Image
+                    src={user.avatarUrl}
+                    alt="Avatar"
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 rounded-full object-cover ring-2 ring-[#e8e4df]"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-[#1a4a4a]/10 flex items-center justify-center text-sm font-medium text-[#1a4a4a] ring-2 ring-[#e8e4df]">
+                    {getInitials()}
+                  </div>
+                )}
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-sm font-medium text-[#3a4a4a] hover:text-[#1a2a2a] transition-colors px-3 py-2"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/signup"
+                  className="text-sm font-medium bg-[#1a4a4a] hover:bg-[#0d3535] text-white px-5 py-2 rounded-lg transition-colors"
+                >
+                  Get started
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile hamburger */}
@@ -148,20 +218,20 @@ export function MarketingNav({ variant }: { variant?: 'landing' }) {
 
         {/* Desktop mega-menu panels */}
         <AnimatePresence>
-          {activeDropdown === 'tools' && (
+          {activeDropdown === 'modules' && (
             <motion.div
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.15, ease: easeOut }}
               className="absolute left-0 right-0 top-full hidden lg:block"
-              onMouseEnter={() => openDropdown('tools')}
+              onMouseEnter={() => openDropdown('modules')}
               onMouseLeave={scheduleClose}
             >
               <div className="bg-[#faf9f7] border-b border-[#e8e4df] shadow-lg">
                 <div className="max-w-6xl mx-auto p-6">
                   <div className="grid grid-cols-3 gap-3">
-                    {toolItems.map((item) => (
+                    {moduleItems.map((item) => (
                       <Link
                         key={item.href}
                         href={item.href}
@@ -176,6 +246,50 @@ export function MarketingNav({ variant }: { variant?: 'landing' }) {
                           <div className="text-xs text-[#5a6a6a] leading-relaxed">{item.description}</div>
                         </div>
                       </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activeDropdown === 'tools' && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15, ease: easeOut }}
+              className="absolute left-0 right-0 top-full hidden lg:block"
+              onMouseEnter={() => openDropdown('tools')}
+              onMouseLeave={scheduleClose}
+            >
+              <div className="bg-[#faf9f7] border-b border-[#e8e4df] shadow-lg">
+                <div className="max-w-6xl mx-auto p-6">
+                  <div className="grid grid-cols-3 gap-8">
+                    {aiToolGroups.map((group) => (
+                      <div key={group.label}>
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-[#5a6a6a]/70 mb-3 px-3">
+                          {group.label}
+                        </div>
+                        <div className="space-y-1">
+                          {group.items.map((item) => (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              onClick={() => setActiveDropdown(null)}
+                              className="flex items-start gap-3 p-3 rounded-lg hover:bg-[#1a4a4a]/5 transition-colors group"
+                            >
+                              <div className="w-9 h-9 rounded-lg bg-[#1a4a4a]/10 flex items-center justify-center shrink-0 group-hover:bg-[#1a4a4a]/15 transition-colors">
+                                <item.icon className="w-4.5 h-4.5 text-[#1a4a4a]" />
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-[#1a2a2a] mb-0.5">{item.title}</div>
+                                <div className="text-xs text-[#5a6a6a] leading-relaxed">{item.description}</div>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -251,13 +365,41 @@ export function MarketingNav({ variant }: { variant?: 'landing' }) {
               </div>
 
               <div className="flex-1 overflow-y-auto py-4">
-                <Link
-                  href="/resume-builder"
-                  onClick={closeMobile}
-                  className="block px-6 py-2.5 text-sm font-medium text-[#3a4a4a] hover:text-[#1a2a2a]"
-                >
-                  Resume Builder
-                </Link>
+                {/* Modules accordion */}
+                <div>
+                  <button
+                    onClick={() => setMobileAccordion(mobileAccordion === 'modules' ? null : 'modules')}
+                    className="flex items-center justify-between w-full px-6 py-2.5 text-sm font-medium text-[#3a4a4a] hover:text-[#1a2a2a]"
+                  >
+                    Modules
+                    <ChevronDown className={`w-4 h-4 transition-transform ${mobileAccordion === 'modules' ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {mobileAccordion === 'modules' && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pb-2">
+                          {moduleItems.map((item) => (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              onClick={closeMobile}
+                              className="flex items-center gap-3 px-8 py-2 text-sm text-[#5a6a6a] hover:text-[#1a2a2a]"
+                            >
+                              <item.icon className="w-4 h-4 text-[#1a4a4a]/60" />
+                              {item.title}
+                            </Link>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
                 {/* AI Tools accordion */}
                 <div>
@@ -278,16 +420,23 @@ export function MarketingNav({ variant }: { variant?: 'landing' }) {
                         className="overflow-hidden"
                       >
                         <div className="pb-2">
-                          {toolItems.map((item) => (
-                            <Link
-                              key={item.href}
-                              href={item.href}
-                              onClick={closeMobile}
-                              className="flex items-center gap-3 px-8 py-2 text-sm text-[#5a6a6a] hover:text-[#1a2a2a]"
-                            >
-                              <item.icon className="w-4 h-4 text-[#1a4a4a]/60" />
-                              {item.title}
-                            </Link>
+                          {aiToolGroups.map((group) => (
+                            <div key={group.label}>
+                              <div className="px-8 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#5a6a6a]/70">
+                                {group.label}
+                              </div>
+                              {group.items.map((item) => (
+                                <Link
+                                  key={item.href}
+                                  href={item.href}
+                                  onClick={closeMobile}
+                                  className="flex items-center gap-3 px-8 py-2 text-sm text-[#5a6a6a] hover:text-[#1a2a2a]"
+                                >
+                                  <item.icon className="w-4 h-4 text-[#1a4a4a]/60" />
+                                  {item.title}
+                                </Link>
+                              ))}
+                            </div>
                           ))}
                         </div>
                       </motion.div>
@@ -342,20 +491,51 @@ export function MarketingNav({ variant }: { variant?: 'landing' }) {
 
               {/* Bottom auth buttons */}
               <div className="p-4 border-t border-[#e8e4df] space-y-2">
-                <Link
-                  href="/login"
-                  onClick={closeMobile}
-                  className="block text-center text-sm font-medium text-[#3a4a4a] hover:text-[#1a2a2a] py-2"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/signup"
-                  onClick={closeMobile}
-                  className="block text-center text-sm font-medium bg-[#1a4a4a] hover:bg-[#0d3535] text-white px-5 py-2.5 rounded-lg transition-colors"
-                >
-                  Get started
-                </Link>
+                {user ? (
+                  <Link
+                    href="/cv-creator"
+                    onClick={closeMobile}
+                    className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#1a4a4a]/5 transition-colors"
+                  >
+                    {user.avatarUrl ? (
+                      <Image
+                        src={user.avatarUrl}
+                        alt="Avatar"
+                        width={32}
+                        height={32}
+                        className="w-8 h-8 rounded-full object-cover ring-2 ring-[#e8e4df]"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-[#1a4a4a]/10 flex items-center justify-center text-sm font-medium text-[#1a4a4a] ring-2 ring-[#e8e4df]">
+                        {getInitials()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[#1a2a2a] truncate">
+                        {user.displayName || 'My Account'}
+                      </p>
+                      <p className="text-xs text-[#5a6a6a] truncate">{user.email}</p>
+                    </div>
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      onClick={closeMobile}
+                      className="block text-center text-sm font-medium text-[#3a4a4a] hover:text-[#1a2a2a] py-2"
+                    >
+                      Sign in
+                    </Link>
+                    <Link
+                      href="/signup"
+                      onClick={closeMobile}
+                      className="block text-center text-sm font-medium bg-[#1a4a4a] hover:bg-[#0d3535] text-white px-5 py-2.5 rounded-lg transition-colors"
+                    >
+                      Get started
+                    </Link>
+                  </>
+                )}
               </div>
             </motion.div>
           </>

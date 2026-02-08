@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { toolItems } from '@/lib/marketing-nav-data'
+import { moduleItems, aiToolItems } from '@/lib/marketing-nav-data'
 
 export function MarketingFooter() {
   return (
@@ -31,9 +31,19 @@ export function MarketingFooter() {
           </div>
           <div className="flex gap-8 flex-wrap">
             <div>
-              <h4 className="text-sm font-medium text-[#1a2a2a] mb-3">Product</h4>
+              <h4 className="text-sm font-medium text-[#1a2a2a] mb-3">Modules</h4>
               <ul className="space-y-2 text-sm text-[#5a6a6a]">
-                {toolItems.map((item) => (
+                {moduleItems.map((item) => (
+                  <li key={item.href}>
+                    <Link href={item.href} className="hover:text-[#1a2a2a] transition-colors">{item.title}</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-[#1a2a2a] mb-3">AI Tools</h4>
+              <ul className="space-y-2 text-sm text-[#5a6a6a]">
+                {aiToolItems.map((item) => (
                   <li key={item.href}>
                     <Link href={item.href} className="hover:text-[#1a2a2a] transition-colors">{item.title}</Link>
                   </li>

@@ -104,7 +104,7 @@ export default function AppNavbar() {
           </button>
 
           {/* Logo */}
-          <Link href="/cv-creator" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <span className="font-semibold text-[#1a2a2a] text-lg tracking-tight hidden sm:inline">Extend Career</span>
           </Link>
 
