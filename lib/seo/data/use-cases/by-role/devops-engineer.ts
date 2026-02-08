@@ -50,7 +50,7 @@ export const devopsEngineerResume: UseCase = {
 <ul>
   <li><strong>SLA/SLO ownership:</strong> "Defined and maintained SLOs for a payment-processing service handling $2M in daily transactions, achieving 99.97% uptime."</li>
   <li><strong>Incident response:</strong> "Led on-call rotation for 40+ microservices; reduced mean time to recovery from 45 minutes to 8 minutes through runbook automation."</li>
-  <li><strong>Post-mortem culture:</strong> "Authored 30+ blameless post-mortems and drove implementation of 85% of resulting action items within two sprints."</li>
+  <li><strong>Post-mortem culture:</strong> "Authored 100+ blameless post-mortems and drove implementation of 85% of resulting action items within two sprints."</li>
   <li><strong>Chaos engineering:</strong> "Implemented Chaos Monkey experiments in staging, uncovering 12 single points of failure before they impacted production."</li>
 </ul>
 <p>If you have experience with error budgets, toil tracking, or capacity planning, include these as well. They demonstrate a strategic, data-driven approach to operations.</p>`,

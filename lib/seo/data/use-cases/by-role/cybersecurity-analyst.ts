@@ -64,7 +64,7 @@ export const cybersecurityAnalystResume: UseCase = {
       body: `<p>Governance, risk, and compliance (GRC) work is a critical part of cybersecurity, and many organizations hire specifically for these skills. Even if you are primarily a technical analyst, demonstrating compliance awareness elevates your candidacy.</p>
 <ul>
   <li><strong>Audit support:</strong> "Prepared evidence packages and led technical walkthroughs for annual SOC 2 Type II audit, achieving zero findings across 85 controls for 3 consecutive years."</li>
-  <li><strong>Policy development:</strong> "Authored 12 security policies and 30+ procedures aligned to NIST CSF and ISO 27001, forming the foundation for the organization's first ISO 27001 certification."</li>
+  <li><strong>Policy development:</strong> "Authored 12 security policies and 100+ procedures aligned to NIST CSF and ISO 27001, forming the foundation for the organization's first ISO 27001 certification."</li>
   <li><strong>Risk assessment:</strong> "Conducted enterprise risk assessments using NIST 800-30 methodology, identifying and prioritizing 45 risks across 8 business units and presenting findings to the CISO and board."</li>
   <li><strong>Vendor security:</strong> "Evaluated 60+ third-party vendors annually using a custom security questionnaire mapped to SOC 2 and ISO 27001 controls, identifying 15 critical risks that led to contract renegotiations."</li>
 </ul>

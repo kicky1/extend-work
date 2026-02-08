@@ -59,7 +59,7 @@ export const dataEngineerResume: UseCase = {
 <ul>
   <li><strong>Testing frameworks:</strong> "Implemented Great Expectations across 120+ datasets with 800+ expectation suites, catching data anomalies before they reached production dashboards."</li>
   <li><strong>Observability:</strong> "Deployed Monte Carlo for automated data observability, reducing mean time to detection for data incidents from 6 hours to 15 minutes."</li>
-  <li><strong>Data contracts:</strong> "Established schema contracts between producer and consumer teams using Protobuf and schema registry, eliminating breaking schema changes across 30+ Kafka topics."</li>
+  <li><strong>Data contracts:</strong> "Established schema contracts between producer and consumer teams using Protobuf and schema registry, eliminating breaking schema changes across 100+ Kafka topics."</li>
   <li><strong>Monitoring and alerting:</strong> "Built custom data freshness and volume monitoring dashboards in Datadog, with PagerDuty integration for critical pipeline SLA breaches."</li>
 </ul>
 <p>Companies increasingly hire specifically for data quality and reliability engineering. If you have experience building or managing data platforms with strong reliability guarantees, call it out explicitly — it is a rare and valuable skill set.</p>`,

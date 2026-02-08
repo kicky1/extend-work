@@ -60,7 +60,7 @@ export const projectManagerResume: UseCase = {
   <li>"Introduced a project intake process that reduced project initiation time from 3 weeks to 5 days and improved stakeholder satisfaction scores by 40%."</li>
   <li>"Standardized sprint ceremonies and retrospective formats across 5 Agile teams, leading to a 25% increase in sprint commitment accuracy."</li>
   <li>"Built a PMO dashboard tracking 12 health metrics across all active projects, enabling early intervention on at-risk initiatives."</li>
-  <li>"Developed a post-mortem template and review process that captured 30+ actionable improvements, 70% of which were implemented within the next quarter."</li>
+  <li>"Developed a post-mortem template and review process that captured 100+ actionable improvements, 70% of which were implemented within the next quarter."</li>
 </ul>
 <p>Process improvement bullets are especially powerful for senior PM roles and PMO positions. They demonstrate systems thinking and a commitment to continuous improvement that goes beyond individual project execution.</p>`,
     },

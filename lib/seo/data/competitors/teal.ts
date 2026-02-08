@@ -112,7 +112,7 @@ Where Teal falls short compared to Extend Career is in email and calendar integr
 
 Extend Career also takes a different approach to AI. Rather than keyword-focused tailoring, Extend Career uses a conversational AI assistant that can generate content, rewrite sections, add entries, and adjust tone through natural chat — all updating your resume in real-time. Teal's AI is more structured and form-driven, working through analysis panels and suggestion lists rather than open conversation.
 
-Template variety is limited in Teal — 10 templates versus 30+ in Extend Career with deep customization for colors, fonts, layouts, spacing, and photo styles. For users who care about visual design and template options, Teal feels restrictive.`,
+Template variety is limited in Teal — 10 templates versus 100+ in Extend Career with deep customization for colors, fonts, layouts, spacing, and photo styles. For users who care about visual design and template options, Teal feels restrictive.`,
   quickVerdict:
     'Teal has grown into a strong job search platform with a new AI Interview Practice Agent, but its keyword-focused approach and missing calendar integration leave gaps. Extend Career provides deeper conversational AI, full email inbox sync, Google Calendar integration, and more template options.',
   whyPeopleSwitch: [

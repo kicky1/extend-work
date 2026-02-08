@@ -135,7 +135,7 @@ For job seekers who primarily need a well-designed resume quickly, Resume.io del
       question:
         'How do Resume.io templates compare to Extend Career templates?',
       answer:
-        'Resume.io offers a large library of visually polished templates with multi-language support. Extend Career provides 30+ templates with deeper customization — adjustable colors, fonts, layouts, spacing, photo styles, and section ordering — all designed to be ATS-compatible. The key difference is that Extend Career pairs templates with a conversational AI that tailors content to specific job descriptions.',
+        'Resume.io offers a large library of visually polished templates with multi-language support. Extend Career provides 100+ templates with deeper customization — adjustable colors, fonts, layouts, spacing, photo styles, and section ordering — all designed to be ATS-compatible. The key difference is that Extend Career pairs templates with a conversational AI that tailors content to specific job descriptions.',
     },
     {
       question:
