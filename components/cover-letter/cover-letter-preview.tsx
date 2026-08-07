@@ -16,6 +16,23 @@ import {
 import { Download, ChevronDown, Loader2 } from 'lucide-react'
 import CoverLetterPaginator from './cover-letter-paginator'
 
+// SEC-005: Sanitize AI-generated cover letter HTML before injecting it into
+// the DOM. The content is produced by an LLM that may be influenced by
+// prompt injection in the job description, so it must not be trusted.
+function sanitizeCoverLetterHtml(html: string): string {
+  // Remove script/style blocks and their contents
+  let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+  sanitized = sanitized.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+  // Remove event handler attributes (onclick, onerror, onload, ...)
+  sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '')
+  sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]+/gi, '')
+  // Neutralize javascript: URLs
+  sanitized = sanitized.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, 'href="#"')
+  sanitized = sanitized.replace(/src\s*=\s*["']javascript:[^"']*["']/gi, 'src="#"')
+  // Strip <iframe>/<object>/<embed> which can load external content
+  sanitized = sanitized.replace(/<\/?(iframe|object|embed|form|input|button|link|meta|base)\b[^>]*>/gi, '')
+  return sanitized
+}
 
 function PreviewSkeleton() {
   return (
@@ -180,7 +197,7 @@ export default function CoverLetterPreview() {
               <div
                 data-section="body"
                 className="prose prose-sm max-w-none text-gray-800 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: coverLetterData.content }}
+                dangerouslySetInnerHTML={{ __html: sanitizeCoverLetterHtml(coverLetterData.content) }}
               />
 
               {/* Closing */}
