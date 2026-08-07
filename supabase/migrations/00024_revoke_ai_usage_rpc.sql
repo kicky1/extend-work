@@ -10,4 +10,4 @@
 -- (supabaseAdmin, which authenticates as service_role) in lib/ai/usage-guard.ts,
 -- so removing the `authenticated` grant does not break any legitimate flow.
 
-REVOKE EXECUTE ON FUNCTION public.increment_ai_usage(UUID, DATE, INT, INT) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.increment_ai_usage(UUID, DATE, INT, INT) FROM PUBLIC, authenticated;
