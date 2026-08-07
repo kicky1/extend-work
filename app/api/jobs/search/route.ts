@@ -78,8 +78,12 @@ export async function POST(request: NextRequest) {
     // Cursor-based pagination (preferred) with OFFSET fallback
     query = query.order('posted_at', { ascending: false, nullsFirst: false })
     if (cursor) {
-      // Keyset pagination: fetch rows older than cursor
-      query = query.or(`posted_at.lt.${cursor.postedAt},and(posted_at.eq.${cursor.postedAt},id.lt.${cursor.id})`)
+      // Keyset pagination: fetch rows older than cursor.
+      // Sanitize cursor values — they are client-controlled and interpolated
+      // directly into a PostgREST .or() filter string.
+      const cursorPostedAt = sanitizePostgrestValue(cursor.postedAt)
+      const cursorId = sanitizePostgrestValue(cursor.id)
+      query = query.or(`posted_at.lt.${cursorPostedAt},and(posted_at.eq.${cursorPostedAt},id.lt.${cursorId})`)
         .limit(PAGE_SIZE)
     } else {
       const offset = (page - 1) * PAGE_SIZE
