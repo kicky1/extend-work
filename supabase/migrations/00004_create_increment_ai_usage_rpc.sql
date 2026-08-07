@@ -22,6 +22,9 @@ BEGIN
 END;
 $$;
 
--- Grant execute to authenticated users (RLS still applies via SECURITY DEFINER)
-GRANT EXECUTE ON FUNCTION increment_ai_usage TO authenticated;
+-- SEC-006: Only the service_role may execute this function. It is SECURITY
+-- DEFINER and does not verify p_user_id = auth.uid(), so granting it to
+-- authenticated users would let any user inflate another user's usage count
+-- (quota exhaustion / DoS). The app only calls it via supabaseAdmin.
+REVOKE EXECUTE ON FUNCTION increment_ai_usage FROM authenticated;
 GRANT EXECUTE ON FUNCTION increment_ai_usage TO service_role;
