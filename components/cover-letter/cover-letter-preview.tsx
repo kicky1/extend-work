@@ -16,6 +16,19 @@ import {
 import { Download, ChevronDown, Loader2 } from 'lucide-react'
 import CoverLetterPaginator from './cover-letter-paginator'
 
+// Sanitize cover letter HTML before rendering. The content is user/AI-authored
+// and rendered via dangerouslySetInnerHTML, so strip anything that could
+// execute script or leak the page (scripts, event handlers, javascript: URLs).
+function sanitizeCoverLetterHtml(html: string): string {
+  let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+  sanitized = sanitized.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+  sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '')
+  sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]+/gi, '')
+  sanitized = sanitized.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, 'href="#"')
+  sanitized = sanitized.replace(/src\s*=\s*["']javascript:[^"']*["']/gi, 'src="#"')
+  return sanitized
+}
+
 
 function PreviewSkeleton() {
   return (
@@ -180,7 +193,7 @@ export default function CoverLetterPreview() {
               <div
                 data-section="body"
                 className="prose prose-sm max-w-none text-gray-800 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: coverLetterData.content }}
+                dangerouslySetInnerHTML={{ __html: sanitizeCoverLetterHtml(coverLetterData.content) }}
               />
 
               {/* Closing */}
